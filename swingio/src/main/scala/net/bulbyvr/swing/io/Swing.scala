@@ -18,7 +18,6 @@ trait SwingTag[F[_], E] private[io] (name: String)(using F: Async[F]) {
 
 }
 opaque type UIElement[F[_]] <: Publisher[F] = swing.UIElement
-
 opaque type Component[F[_]] <: UIElement[F] = swing.Component
 object Component {
   extension[F[_]] (component: Component[F]) {
@@ -117,6 +116,7 @@ object RichWindow {
 }
 
 opaque type Frame[F[_]] <: RichWindow[F] = swing.Frame
+
 opaque type MainFrame[F[_]] <: Frame[F] = swing.MainFrame
 
 opaque type AbstractButton[F[_]] <: Component[F] = swing.AbstractButton

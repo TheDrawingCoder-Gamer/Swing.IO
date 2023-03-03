@@ -1,19 +1,19 @@
 package net.bulbyvr.swing.io
 import cats.data.State
 import cats.effect.kernel.Ref
-import cats.effect.kernel.Sync
+import cats.effect.kernel.Async
 import cats.syntax.all.*
-
+import cats.effect.syntax.all.*
 
 private final class WrappedRef[F[_], A](
     unsafeGet: () => A,
     unsafeSet: A => Unit
-)(implicit F: Sync[F])
+)(implicit F: Async[F])
     extends Ref[F, A] {
 
-  def get: F[A] = F.delay(unsafeGet())
+  def get: F[A] = F.delay(unsafeGet()).evalOn(AwtEventDispatchEC)
 
-  def set(a: A): F[Unit] = F.delay(unsafeSet(a))
+  def set(a: A): F[Unit] = F.delay(unsafeSet(a)).evalOn(AwtEventDispatchEC)
 
   def access: F[(A, A => F[Boolean])] = F.delay {
     val snapshot = unsafeGet()
@@ -23,9 +23,9 @@ private final class WrappedRef[F[_], A](
           unsafeSet(a)
           true
         } else false
-      }
+      }.evalOn(AwtEventDispatchEC)
     (snapshot, setter)
-  }
+  }.evalOn(AwtEventDispatchEC)
 
   def tryUpdate(f: A => A): F[Boolean] =
     update(f).as(true)
@@ -34,14 +34,14 @@ private final class WrappedRef[F[_], A](
     modify(f).map(Some(_))
 
   def update(f: A => A): F[Unit] =
-    F.delay(unsafeSet(f(unsafeGet())))
+    F.delay(unsafeSet(f(unsafeGet()))).evalOn(AwtEventDispatchEC)
 
   def modify[B](f: A => (A, B)): F[B] =
     F.delay {
       val (a, b) = f(unsafeGet())
       unsafeSet(a)
       b
-    }
+    }.evalOn(AwtEventDispatchEC)
 
   def tryModifyState[B](state: State[A, B]): F[Option[B]] =
     tryModify(state.run(_).value)

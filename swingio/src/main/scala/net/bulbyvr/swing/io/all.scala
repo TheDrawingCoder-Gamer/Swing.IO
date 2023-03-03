@@ -10,6 +10,7 @@ sealed class SwingAll[F[_]](using F: Swing[F], A: Async[F])
   extends PropModifiers[F], 
   SwingElems[F],
   Props[F],
-  Modifiers[F] {}
+  Modifiers[F],
+  EventWrappers[F] {}
 
 

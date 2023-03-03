@@ -5,6 +5,10 @@ import scala.concurrent.duration.*
 import cats.effect.kernel.Sync
 import java.awt.Point
 // TODO: Why are we here? just to suffer?
+trait EventWrapper[Ev] {
+  type RawEv
+  def wrap(ev: RawEv): Ev
+}
 trait Event[F[_]] private[io] {}
 
 trait UIEvent[F[_]] private[io] extends Event[F] {}
@@ -54,3 +58,27 @@ final class MouseReleased[F[_]](val event: sevent.MouseReleased)(using F: Sync[F
 trait ActionEvent[F[_]] private[io] extends ComponentEvent[F] {}
 
 final class ButtonClicked[F[_]](val event: sevent.ButtonClicked) extends ActionEvent[F]
+
+final class ValueChanged[F[_]](val event: sevent.ValueChanged) extends ComponentEvent[F] {}
+trait EventWrappers[F[_]](using F: Sync[F]) {
+  given EventWrapper[MouseClicked[F]] = new EventWrapper {
+    type RawEv = sevent.MouseClicked
+    def wrap(it: RawEv) = new MouseClicked(it)
+  }
+  given EventWrapper[MousePressed[F]] = new EventWrapper {
+    type RawEv = sevent.MousePressed
+    def wrap(it: RawEv) = new MousePressed(it)
+  }
+  given EventWrapper[MouseReleased[F]] = new EventWrapper {
+    type RawEv = sevent.MouseReleased
+    def wrap(it: RawEv) = new MouseReleased(it)
+  }
+  given EventWrapper[ButtonClicked[F]] = new EventWrapper[ButtonClicked[F]] {
+    type RawEv = sevent.ButtonClicked
+    def wrap(it: RawEv) = new ButtonClicked[F](it)
+  }
+  given EventWrapper[ValueChanged[F]] = new EventWrapper {
+    type RawEv = sevent.ValueChanged
+    def wrap(it: RawEv) = new ValueChanged(it)
+  }
+}
