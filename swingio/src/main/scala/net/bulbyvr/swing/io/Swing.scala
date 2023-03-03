@@ -3,12 +3,13 @@ package net.bulbyvr.swing.io
 import cats.effect.IO
 import cats.effect.kernel.{Async, Ref}
 import scala.swing
+import scala.reflect.TypeTest
 
 opaque type Swing[F[_]] = Async[F]
 
 object Swing {
   implicit inline def forIO: Swing[IO] = IO.asyncForIO
-  inline def forAsync[F[_]](using F: Async[F]): Swing[F] = F
+  implicit inline def forAsync[F[_]](using F: Async[F]): Swing[F] = F
 }
 
 trait SwingTag[F[_], E] private[io] (name: String)(using F: Async[F]) {
@@ -50,6 +51,12 @@ object SequentialContainer {
   }
 }
 opaque type Reactor[F[_]] = swing.Reactor
+object Reactor {
+  extension [F[_]](reactor: Reactor[F]) {
+    private[io] def reactions =
+      reactor.reactions
+  }
+}
 opaque type Publisher[F[_]] <: Reactor[F] = swing.Publisher
 
 opaque type Panel[F[_]] <: (Component[F] & ContainerWrapper[F]) = swing.Panel
@@ -104,6 +111,8 @@ object RichWindow {
     def menuBar(using F: Swing[F]): Ref[F, MenuBar[F]] = {
       new WrappedRef(() => richWindow.menuBar, richWindow.menuBar = _)
     }
+    def title(using F: Swing[F]): Ref[F, String] = 
+      new WrappedRef(() => richWindow.title, richWindow.title = _)
   }
 }
 
@@ -111,6 +120,12 @@ opaque type Frame[F[_]] <: RichWindow[F] = swing.Frame
 opaque type MainFrame[F[_]] <: Frame[F] = swing.MainFrame
 
 opaque type AbstractButton[F[_]] <: Component[F] = swing.AbstractButton
+object AbstractButton {
+  extension[F[_]](button: AbstractButton[F]) {
+    def text(using F: Swing[F]): Ref[F, String] =
+      new WrappedRef(() => button.text, button.text = _)
+  }
+}
 
 opaque type Button[F[_]] <: AbstractButton[F] = swing.Button
 
@@ -145,6 +160,12 @@ object ComboBox {
 }
 opaque type ItemRenderer[F[_], -A] = swing.ListView.Renderer[A]
 opaque type Label[F[_]] <: Component[F] = swing.Label
+object Label {
+  extension[F[_]] (label: Label[F]) {
+    def text(using F: Swing[F]): Ref[F, String] =
+      new WrappedRef(() => label.text, label.text = _)
+  }
+}
 
 
 opaque type FlowPanel[F[_]] <: (Panel[F] & SeqWrapper[F]) = swing.FlowPanel
@@ -154,38 +175,11 @@ opaque type BoxPanel[F[_]] <: (Panel[F] & SeqWrapper[F]) = swing.BoxPanel
 opaque type ListView[F[_], A] <: Component[F] = swing.ListView[A]
 
 opaque type TextComponent[F[_]] <: Component[F] = swing.TextComponent
-
-
-import swing.event as sevent
-opaque type Event[F[_]] = sevent.Event
-
-opaque type UIEvent[F[_]] <: Event[F] = sevent.UIEvent
-object UIEvent {
-  extension[F[_]] (event: UIEvent[F]) {
-    def source(using F: Swing[F]): UIElement[F] = 
-      event.source
+object TextComponent {
+  extension[F[_]] (tc: TextComponent[F]) {
+    def text(using F: Swing[F]): Ref[F, String] =
+      new WrappedRef(() => tc.text, tc.text = _)
   }
 }
 
-opaque type ComponentEvent[F[_]] <: UIEvent[F] = sevent.ComponentEvent
-object ComponentEvent {
-  extension[F[_]] (event: ComponentEvent[F]) {
-    def source(using F: Swing[F]): Component[F] =
-      event.source
-  }
-}
-
-opaque type InputEvent[F[_]] <: ComponentEvent[F] = sevent.InputEvent
-object InputEvent {
-  extension[F[_]] (event: InputEvent[F]) {
-    def modifiers: sevent.Key.Modifiers =
-      event.modifiers
-  }
-}
-
-opaque type MouseEvent[F[_]] <: InputEvent[F] = sevent.MouseEvent
-
-opaque type MouseButtonEvent[F[_]] <: MouseEvent[F] = sevent.MouseButtonEvent
-
-opaque type MouseClicked[F[_]] <: MouseButtonEvent[F] = sevent.MouseClicked
-
+opaque type TextField[F[_]] <: TextComponent[F] = swing.TextField

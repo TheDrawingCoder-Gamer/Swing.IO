@@ -5,7 +5,7 @@ import cats.effect.kernel.Resource
 import cats.effect.syntax.all.*
 import cats.syntax.all.*
 import scala.swing
-final class SwingElem[F[_], E <: UIElement[F]] private[io] (constructor: () => E)(using F: Async[F]) {
+final class SwingElem[F[_], E] private[io] (constructor: () => E)(using F: Async[F]) {
   private def build = F.delay(constructor())
   def apply[M](modifier: M)(using M: Modifier[F, E, M]): Resource[F, E] =
     build.toResource.flatTap(M.modify(modifier, _))
@@ -14,7 +14,8 @@ final class SwingElem[F[_], E <: UIElement[F]] private[io] (constructor: () => E
 }
 
 private trait SwingElems[F[_]](using Async[F]) {
-  private[io] def swingElem[Raw <: swing.UIElement, T <: UIElement[F]](cons: () => Raw): SwingElem[F, T] =
+  private[io] def swingElem[Raw, T](cons: () => Raw): SwingElem[F, T] =
+    // TODO: do this w/o casting
     SwingElem(() => cons().asInstanceOf[T])
   lazy val label: SwingElem[F, Label[F]] = swingElem[swing.Label, Label[F]](() => swing.Label())
   lazy val window: SwingElem[F, MainFrame[F]] = swingElem[swing.MainFrame, MainFrame[F]](() => new swing.MainFrame {})
