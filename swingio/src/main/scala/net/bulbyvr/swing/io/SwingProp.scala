@@ -9,6 +9,8 @@ import cats.syntax.all.*
 import cats.effect.syntax.all.*
 import scala.reflect.TypeTest
 import scala.reflect.ClassTag
+import swing.event as sevent
+import java.awt.Window
 sealed class SwingProp[F[_], A] private[io] {
   import SwingProp.*
   def :=[V](v: V): ConstantModifier[F, A, V] =
@@ -57,19 +59,23 @@ object SwingProp {
     )
   private[io] def listener[F[_], T, Raw](target: Reactor[F], wrapper: Raw => T)
   (using F: Async[F], T: TypeTest[swing.event.Event, Raw]): Stream[F, T] =
-    Stream.repeatEval {
+    Stream.eval {
       F.async[T] { cb => 
-        F.delay {
-          val fn: PartialFunction[swing.event.Event, Unit] = { 
-            case e: Raw =>
-              cb(Right(wrapper(e)))
+        for {
+          fn <- F.delay[PartialFunction[swing.event.Event, Unit]] {
+            {
+                case e: Raw =>
+                  cb(Right(wrapper(e)))
+                
+            }
           }
+        
+          _ <- target.addReaction(fn)
+          res <- F.delay[Option[F[Unit]]] { Some(F.delay(target.rmReaction(fn))) }
+        } yield res
 
-          target.reactions += fn
-          Some(F.delay(target.reactions -= fn))
-        }
       }
-    }
+    }.repeat
 }
 
 private trait PropModifiers[F[_]](using F: Async[F]) {

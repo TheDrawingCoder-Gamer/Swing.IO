@@ -4,6 +4,8 @@ import cats.effect.IO
 import cats.effect.kernel.{Async, Ref}
 import scala.swing
 import scala.reflect.TypeTest
+import cats.effect.syntax.all.*
+import cats.syntax.all.*
 
 opaque type Swing[F[_]] = Async[F]
 
@@ -43,17 +45,21 @@ object SequentialContainer {
     }
     def append(comp: Component[F])(using F: Swing[F]): F[Unit] = F.delay {
       seqContainer.contents += comp
-    }
+      ()
+    }.evalOn(AwtEventDispatchEC)
     def prepend(comp: Component[F])(using F: Swing[F]): F[Unit] = F.delay {
       seqContainer.contents.prepend(comp)
-    }
+      ()
+    }.evalOn(AwtEventDispatchEC)
   }
 }
 opaque type Reactor[F[_]] = swing.Reactor
 object Reactor {
   extension [F[_]](reactor: Reactor[F]) {
-    private[io] def reactions =
-      reactor.reactions
+    def addReaction(reaction: swing.Reactions.Reaction)(using F: Swing[F]): F[Unit] =
+      F.delay { reactor.reactions += reaction }.evalOn(AwtEventDispatchEC).void
+    def rmReaction(reaction: swing.Reactions.Reaction)(using F: Swing[F]): F[Unit] =
+      F.delay { reactor.reactions -= reaction }.evalOn(AwtEventDispatchEC).void
   }
 }
 opaque type Publisher[F[_]] <: Reactor[F] = swing.Publisher
@@ -61,8 +67,9 @@ opaque type Publisher[F[_]] <: Reactor[F] = swing.Publisher
 opaque type Panel[F[_]] <: (Component[F] & ContainerWrapper[F]) = swing.Panel
 object Panel {
   extension[F[_]] (panel: Panel[F]) {
-    def contents(using F: Swing[F]) = 
-      F.delay(panel.contents)
+    def contents(using F: Swing[F]): F[Seq[Component[F]]] = 
+      // I'm going to hell
+      F.delay(panel.contents).asInstanceOf[F[Seq[Component[F]]]]
   }
 }
 
@@ -85,9 +92,9 @@ opaque type Window[F[_]] <: (UIElement[F] & RootPanel[F]) = swing.Window
 object Window {
   extension [F[_]](win: Window[F]) {
     def open(using F: Swing[F]): F[Unit] =
-      F.delay { win.centerOnScreen(); win.open() }
+      F.delay { win.centerOnScreen(); win.open() }.evalOn(AwtEventDispatchEC)
     def close(using F: Swing[F]): F[Unit] =
-      F.delay { win.close() }
+      F.delay { win.close() }.evalOn(AwtEventDispatchEC)
   }
 }
 
@@ -146,10 +153,10 @@ opaque type CheckMenuItem[F[_]] <: MenuItem[F] = swing.CheckMenuItem
 opaque type ComboBox[F[_], A] <: Component[F] = helpers.MutableComboBox[A]
 object ComboBox {
   extension[F[_], A] (comboBox: ComboBox[F, A]) {
-    def clear(using F: Swing[F]): F[Unit] = F.delay { comboBox.items.removeAllElements() }
-    def addAll(elems: TraversableOnce[A])(using F: Swing[F]): F[Unit] = F.delay { comboBox.items ++= elems }
+    def clear(using F: Swing[F]): F[Unit] = F.delay { comboBox.items.removeAllElements() }.evalOn(AwtEventDispatchEC)
+    def addAll(elems: TraversableOnce[A])(using F: Swing[F]): F[Unit] = F.delay { comboBox.items ++= elems }.evalOn(AwtEventDispatchEC)
     def ++=(elems: TraversableOnce[A])(using F: Swing[F]): F[Unit] = comboBox.addAll(elems)
-    def add(elem: A)(using F: Swing[F]): F[Unit] = F.delay { comboBox.items += elem }
+    def add(elem: A)(using F: Swing[F]): F[Unit] = F.delay { comboBox.items += elem }.evalOn(AwtEventDispatchEC)
     def +=(elem: A)(using F: Swing[F]): F[Unit] = comboBox.add(elem)
     def value(using F: Swing[F]): Ref[F, A] = 
       new WrappedRef(() => comboBox.selection.item, comboBox.selection.item = _)
