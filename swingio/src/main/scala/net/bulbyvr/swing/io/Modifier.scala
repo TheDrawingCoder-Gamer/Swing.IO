@@ -9,6 +9,7 @@ import cats.Foldable
 import fs2.concurrent.Signal
 import cats.effect.syntax.all.*
 import cats.Contravariant
+import wrapper as swingio
 trait Modifier[F[_], E, A] { outer => 
   def modify(a: A, e: E): Resource[F, Unit]
   
@@ -58,23 +59,15 @@ object Modifier {
 }
 
 private trait Modifiers[F[_]](using F: Async[F]) {
-  private val _forString: Modifier[F, swing.SequentialContainer, String] = (s, e) => {
-    Resource.eval {
-      F.delay {
-        e.contents += swing.Label(s)
-        ()
-      }
+  given forString[E <: swingio.MutableContainer[F]]: Modifier[F, E, String] = 
+    (a, e) => {
+      swingio.Label[F](a).flatMap(l => e.content.addOne(l).toResource)
     }
-  }
-  inline given forString[E <: SequentialContainer[F]]: Modifier[F, E, String] = 
-    _forString.asInstanceOf[Modifier[F, E, String]]
-  private val _forRootString: Modifier[F, swing.RootPanel, String] = (s, e) => {
-    Resource.eval {
-      F.delay { e.contents = swing.Label(s)}
+  given forRootString[E <: swingio.RootPanel[F]]: Modifier[F, E, String] =
+    (a, e) => {
+      swingio.Label[F](a).flatMap(l => e.child.set(Some(l)).toResource) 
     }
-  }
-  inline given forRootString[E <: RootPanel[F]]: Modifier[F, E, String] =
-    _forRootString.asInstanceOf[Modifier[F, E, String]]
+    /*
   private val _forStringSignal: Modifier[F, swing.SequentialContainer, Signal[F, String]] = (s, e) => {
     s.getAndDiscreteUpdates.flatMap { (head, tail) => 
       Resource
@@ -106,52 +99,43 @@ private trait Modifiers[F[_]](using F: Async[F]) {
       }
     }
   }
-  
-  inline given forComponent[E <: SequentialContainer[F], C <: Component[F]]: Modifier[F, E, C] =
-    _forComponent.asInstanceOf[Modifier[F, E, C]]
-  private val _forRootComponent: Modifier[F, swing.RootPanel, swing.Component] = (a, e) => {
-    Resource.eval {
-      F.delay {
-        e.contents = a
-        ()
-      }
-    }
+  */ 
+  given forComponent[E <: swingio.MutableContainer[F], C <: swingio.Component[F]]: Modifier[F, E, C] = { (a, e) =>
+    e.content.addOne(a).toResource
   }
   
-  inline given forRootComponent[E <: RootPanel[F], C <: Component[F]]: Modifier[F, E, C] =
-    _forRootComponent.asInstanceOf[Modifier[F, E, C]]
+  given forRootComponent[E <: swingio.RootPanel[F], C <: swingio.Component[F]]: Modifier[F, E, C] = { (a, e) =>
+    e.child.set(Some(a)).toResource
+  }
 
-  private val _forComponentResource: Modifier[F, swing.SequentialContainer, Resource[F, swing.Component]] = 
-    Modifier.forResource(using _forComponent)
 
-  inline given forComponentResource[E <: SequentialContainer[F], C <: Component[F]]: Modifier[F, E, Resource[F, C]] =
-    _forComponentResource.asInstanceOf[Modifier[F, E, Resource[F, C]]]
+  given forComponentResource[E <: swingio.MutableContainer[F], C <: swingio.Component[F]]: Modifier[F, E, Resource[F, C]] = 
+    Modifier.forResource
 
-  private val _forRootComponentResource: Modifier[F, swing.RootPanel, Resource[F, swing.Component]] = 
-    Modifier.forResource(using _forRootComponent)
 
-  inline given forRootComponentResource[E <: RootPanel[F], C <: Component[F]]: Modifier[F, E, Resource[F, C]] =
-    _forRootComponentResource.asInstanceOf[Modifier[F, E, Resource[F, C]]]
-  private val _forComponentSignal: Modifier[F, swing.SequentialContainer, Signal[F, Resource[F, swing.Component]]] = 
-    (cs, e) => 
-      cs.getAndDiscreteUpdates.flatMap { (head, tail) => 
-        SwingHotswap(head).flatMap { (hs, c2) => 
-          F.delay(e.contents += c2).toResource *>
-          (F.cede *> tail
-            .foreach(hs.swap(_)((c2, c3) => F.delay {
-              val idx = e.contents.indexOf(c2)
-              if (idx != -1) {
-                e.contents(idx) = c3
-              } 
-              ()
-            }))
-            .compile
-            .drain
-            ).background
-        }.void
-      }
-  inline given forComponentSignal[E <: SequentialContainer[F], C <: Component[F]]: Modifier[F, E, Signal[F, Resource[F, C]]] =
-    _forComponentSignal.asInstanceOf[Modifier[F, E, Signal[F, Resource[F, C]]]]
-
+  given forRootComponentResource[E <: swingio.RootPanel[F], C <: swingio.Component[F]]: Modifier[F, E, Resource[F, C]] =
+    Modifier.forResource
+  given forComponentSignal[E <: swingio.MutableContainer[F], C <: swingio.Component[F]]: Modifier[F, E, Signal[F, Resource[F, C]]] = { (cs, e) =>
+    cs.getAndDiscreteUpdates.flatMap { (head, tail) =>
+      SwingHotswap(head).flatMap { (hs, c2) =>
+        e.content.addOne(c2).toResource *>
+        (F.cede *> tail
+          .foreach(hs.swap(_)((c2, c3) => {
+            for {
+              contents <- e.contents
+              idx = contents.indexOf(c2)
+              _ <- 
+                if (idx != -1)
+                  e.content(idx) = c3
+                else
+                  F.unit
+            } yield ()
+          }))
+          .compile
+          .drain
+          ).background
+      }.void
+    } 
+  }
   // TODO: forComponentOptionSignal
 }

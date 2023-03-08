@@ -23,7 +23,7 @@ lazy val simple = project
   .dependsOn(swingio)
   .settings(
     name := "simple",
-    Compile / run / fork := true,
+    assembly / assemblyJarName := "assembly.jar",
   )
 
 lazy val root = 

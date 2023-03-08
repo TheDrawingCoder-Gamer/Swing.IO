@@ -5,12 +5,10 @@ import cats.effect.kernel.Async
 
 object all extends SwingAll[IO]
 
-import Swing.*
-sealed class SwingAll[F[_]](using F: Swing[F], A: Async[F])
+sealed class SwingAll[F[_]](using A: Async[F])
   extends PropModifiers[F], 
   SwingElems[F],
   Props[F],
-  Modifiers[F],
-  EventWrappers[F] {}
+  Modifiers[F] {}
 
 

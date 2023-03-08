@@ -3,14 +3,13 @@ package net.bulbyvr.swing.io
 import cats.effect.kernel.Async
 import cats.effect.kernel.Resource
 import fs2.concurrent.Signal
-import scala.swing 
 import fs2.*
 import cats.syntax.all.*
 import cats.effect.syntax.all.*
 import scala.reflect.TypeTest
 import scala.reflect.ClassTag
-import swing.event as sevent
 import java.awt.Window
+import wrapper as swingio
 sealed class SwingProp[F[_], A] private[io] {
   import SwingProp.*
   def :=[V](v: V): ConstantModifier[F, A, V] =
@@ -19,9 +18,13 @@ sealed class SwingProp[F[_], A] private[io] {
     SignalModifier(vs)
   def <--[V](vs: Resource[F, Signal[F, V]]): SignalResourceModifier[F, A, V] =
     SignalResourceModifier(vs)
-  def <--[V](v: Resource[F, V]): ResourceModifier[F, A, V] =
-    ResourceModifier(v)
+  // def <--[V](v: Resource[F, V]): ResourceModifier[F, A, V] =
+  //  ResourceModifier(v)
   def -->[Ev](listener: Pipe[F, Ev, Nothing]): PipeModifier[F, A, Ev] =
+    PipeModifier(listener)
+  // more specific listener that always infers correctly :sob:
+  // Only really works with listen
+  def ~~>(listener: Pipe[F, swingio.event.Event[F], Nothing]): PipeModifier[F, A, swingio.event.Event[F]] =
     PipeModifier(listener)
   // Option isn't real, it can't hurt you
   // inline def <--(vs: Signal[F, Option[V]]): OptionSignalModifier[F, E, V] =
@@ -57,25 +60,9 @@ object SwingProp {
     private[io] val sink: Pipe[F, Ev, Nothing]
 
     )
-  private[io] def listener[F[_], T, Raw](target: Reactor[F], wrapper: Raw => T)
-  (using F: Async[F], T: TypeTest[swing.event.Event, Raw]): Stream[F, T] =
-    Stream.eval {
-      F.async[T] { cb => 
-        for {
-          fn <- F.delay[PartialFunction[swing.event.Event, Unit]] {
-            {
-                case e: Raw =>
-                  cb(Right(wrapper(e)))
-                
-            }
-          }
-        
-          _ <- target.addReaction(fn)
-          res <- F.delay[Option[F[Unit]]] { Some(F.delay(target.rmReaction(fn))) }
-        } yield res
-
-      }
-    }.repeat
+  private[io] def listener[F[_], T <: swingio.event.Event[F]](target: swingio.WithTopic[F])
+  (using F: Async[F], T: TypeTest[swingio.event.Event[F], T]): Stream[F, T] =
+    target.topic.subscribe(20).collect { case e: T => e }
 }
 
 private trait PropModifiers[F[_]](using F: Async[F]) {
@@ -93,42 +80,48 @@ private trait PropModifiers[F[_]](using F: Async[F]) {
   given forResource[E, A, V](using S: Setter[F, E, A, V]): Modifier[F, E, ResourceModifier[F, A, V]] =
     (m, n) => m.value.map(S.set(n, _))
 
-  given forPipeEventProp[E <: UIElement[F], A, Ev](using E: Emits[F, E, A, Ev], EW: EventWrapper[Ev], T: TypeTest[swing.event.Event, EW.RawEv])
+  given forPipeEventProp[E <: swingio.UIElement[F], A, Ev <: swingio.event.Event[F]](using E: Emits[F, E, A, Ev], T: TypeTest[swingio.event.Event[F], Ev])
   : Modifier[F, E, PipeModifier[F, A, Ev]] = 
-    (m, t) => (F.cede *> listener[F, Ev, EW.RawEv](t, EW.wrap).through(m.sink).compile.drain).background.void
+    (m, t) => (F.cede *> listener[F, Ev](t).through(m.sink).compile.drain).background.void
 
 }
 
-private trait Props[F[_]](using F: Swing[F], A: Async[F]) {
+private trait Props[F[_]](using A: Async[F]) extends LowPriorityProps[F] {
   import SwingProp.*
   def prop[A]: SwingProp[F, A] =
     SwingProp[F, A]
-  given textBtn[E <: AbstractButton[F]]: Setter[F, E, "text", String] =
+  //given textBtn[E <: AbstractButton[F]]: Setter[F, E, "text", String] =
+  //  (e, v) => e.text.set(v)
+  given textMost[E <: swingio.WithChangableText[F]]: Setter[F, E, "text", String] =
     (e, v) => e.text.set(v)
-  given labelText[E <: Label[F]]: Setter[F, E, "text", String] =
-    (e, v) => e.text.set(v)
-  given txtCompText[E <: TextComponent[F]]: Setter[F, E, "text", String] =
-    (e, v) => e.text.set(v)
+  //given txtCompText[E <: TextComponent[F]]: Setter[F, E, "text", String] =
+  //  (e, v) => e.text.set(v)
   lazy val text: SwingProp[F, "text"] = prop["text"]
-  given richWindowTitle[E <: RichWindow[F]]: Setter[F, E, "title", String] =
+  given richWindowTitle[E <: swingio.RichWindow[F]]: Setter[F, E, "title", String] =
     (e, v) => e.title.set(v)
   lazy val title: SwingProp[F, "title"] = prop["title"]
-  given rootPanelChild[E <: RootPanel[F]]: Setter[F, E, "child", Component[F]] =
+  given rootPanelChild[E <: swingio.RootPanel[F], C <: swingio.Component[F]]: Setter[F, E, "child", C] =
     (e, v) => e.child.set(Some(v))
   lazy val child: SwingProp[F, "child"] =
     prop["child"]
-  given btnClick[E <: AbstractButton[F]]: Emits[F, E, "onClick", ButtonClicked[F]] = new Emits {}
-  // given compClick[E <: Component[F]]: Emits[F, E, "onClick", MouseClicked[F], swing.event.MouseClicked] =
-  //  MouseClicked.apply(_)
+  given btnClick[E <: swingio.AbstractButton[F]]: Emits[F, E, "onClick", swingio.event.ButtonClicked[F]] = new Emits {}
   lazy val onClick: SwingProp[F, "onClick"] =
     prop["onClick"]
-  given txtValueChanged[E <: TextComponent[F]]: Emits[F, E, "onValueChanged", ValueChanged[F]] = new Emits{}
-  lazy val onValueChanged: SwingProp[F, "onValueChanged"] =
-    prop["onValueChanged"]
+  // Listen allows one to listen to ALL possible events
+  given listen[E <: swingio.UIElement[F]]: Emits[F, E, "listen", swingio.event.Event[F]] = new Emits {}
+  lazy val listen: SwingProp[F, "listen"] =
+    prop["listen"]
+  // given txtValueChanged[E <: TextComponent[F]]: Emits[F, E, "onValueChanged", ValueChanged[F]] = new Emits{}
+  // lazy val onValueChanged: SwingProp[F, "onValueChanged"] =
+  //   prop["onValueChanged"]
 
 }
 
+private trait LowPriorityProps[F[_]] (using F: Async[F]) {
+  import SwingProp.*
+  given compClick[E <: swingio.Component[F]]: Emits[F, E, "onClick", swingio.event.MouseClicked[F]] = new Emits {}
 
+}
 
 
 
