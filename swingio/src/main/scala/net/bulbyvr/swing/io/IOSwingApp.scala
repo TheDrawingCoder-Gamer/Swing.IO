@@ -1,11 +1,12 @@
 package net.bulbyvr.swing.io
 
-import cats.effect.{IO, IOApp}
+import cats.effect.{IO, IOApp, ExitCode, Deferred}
 import cats.effect.kernel.Resource
 import cats.effect.unsafe.implicits.*
+import cats.syntax.all.*
 trait IOSwingApp extends IOApp {
-  def render: Resource[IO, MainFrame[IO]]
+  def render: Resource[IO, (wrapper.MainFrame[IO], Deferred[IO, Unit])]
 
-  def run(args: List[String]) = render.flatMap { f => Resource.make(f.open)(_ => f.close) }.useForever
+  def run(args: List[String]) = render.flatMap { case t @ (f, _) => Resource.make(f.open *> t.pure[IO])(_ => IO.unit) }.use { case (_, gate) => gate.get } *> ExitCode.Success.pure[IO] 
 }
 

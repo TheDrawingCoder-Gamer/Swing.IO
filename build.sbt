@@ -1,7 +1,8 @@
-val scala3Version = "3.2.0"
+val scala3Version = "3.2.2"
 
-ThisBuild / scalacOptions ++= Seq("-old-syntax", "-no-indent", "-source:future")
+ThisBuild / scalacOptions ++= Seq("-old-syntax", "-no-indent", "-source:future", "-Ykind-projector:underscores")
 ThisBuild / scalaVersion := scala3Version
+ThisBuild / organization := "io.github.TheDrawingCoder-Gamer"
 lazy val swingio = project
   .in(file("swingio"))
   .settings(
@@ -23,7 +24,8 @@ lazy val simple = project
   .dependsOn(swingio)
   .settings(
     name := "simple",
-    Compile / run / fork := true,
+    assembly / assemblyJarName := "assembly.jar",
+    // Compile / run / fork := true
   )
 
 lazy val root = 
