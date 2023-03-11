@@ -23,3 +23,10 @@ trait InputEvent[F[_]](using F: Async[F]) extends ComponentEvent[F] {
   def modifiers: Int
 }
 
+trait SelectionEvent[F[_]] extends Event[F]
+
+trait ListSelectionEvent[F[_]] extends SelectionEvent[F] {
+  def range: Range
+}
+
+case class SelectionChanged[F[_]](val source: Component[F]) extends ComponentEvent[F] with SelectionEvent[F]

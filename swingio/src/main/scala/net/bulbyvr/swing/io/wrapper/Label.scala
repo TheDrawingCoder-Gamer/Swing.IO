@@ -9,11 +9,19 @@ import javax.swing.JLabel
 import fs2.concurrent.Topic
 class Label[F[_]](text0: String, topic: Topic[F, event.Event[F]], dispatcher: Dispatcher[F])(using F: Async[F]) 
   extends Component[F](topic, dispatcher)
-  with WithChangableText[F](using F) {
+  with WithChangableText[F](using F)
+  with WithIcon[F] {
   override lazy val peer: JLabel =
     new JLabel(text0)
   def text: Ref[F, String] =
     new WrappedRef(peer.getText, peer.setText)
+  def icon: Ref[F, Option[Icon[F]]] =
+    new FWrappedRef(F.delay { Option(peer.getIcon) }.flatMap(_.traverse(Icon[F](_))),
+      it => 
+        F.delay { peer.setIcon(it.map(_.peer).orNull) }
+      )
+  def iconTextGap: Ref[F, Int] =
+    new WrappedRef(peer.getIconTextGap, peer.setIconTextGap)
 }
 
 object Label {

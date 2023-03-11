@@ -13,7 +13,7 @@ sealed trait SwingElem[F[_], E, R] private[io] {
   def withSelf[M](mkModifier: E => M)(using M: Modifier[F, E, M]): Resource[F, R]
   
 }
-sealed class NormalElem[F[_], E] private[io] (val constructor: Resource[F, E])(using F: Async[F]) extends SwingElem[F, E, E] {
+final class NormalElem[F[_], E] private[io] (val constructor: Resource[F, E])(using F: Async[F]) extends SwingElem[F, E, E] {
   def apply[M](modifier: M)(using M: Modifier[F, E, M]): Resource[F, E] =
     constructor.flatTap(M.modify(modifier, _))
   def withSelf[M](mkModifier: E => M)(using M: Modifier[F, E, M]): Resource[F, E] =
@@ -29,8 +29,12 @@ final class MainElem[F[_]] private[io] (val fullConstructor: Resource[F, (swingi
 private trait SwingElems[F[_]](using F: Async[F]) {
   lazy val label: NormalElem[F, swingio.Label[F]] = NormalElem(swingio.Label(""))
   lazy val window: MainElem[F] = MainElem(swingio.MainFrame[F])
-  // lazy val flow: SwingElem[F, FlowPanel[F]] = swingElem[swing.FlowPanel, FlowPanel[F]](F.delay(new swing.FlowPanel()))
+  lazy val flow: NormalElem[F, swingio.FlowPanel[F]] = NormalElem(swingio.FlowPanel[F](swingio.FlowPanel.Alignment.Center))
   lazy val box: NormalElem[F, swingio.BoxPanel[F]] = NormalElem(swingio.BoxPanel[F](swingio.Orientation.Vertical))
   lazy val button: NormalElem[F, swingio.Button[F]] = NormalElem(swingio.Button[F])
   lazy val textField: NormalElem[F, swingio.TextField[F]] = NormalElem(swingio.TextField[F])
+  lazy val checkbox: NormalElem[F, swingio.CheckBox[F]] = NormalElem(swingio.CheckBox[F])
+  lazy val radio: NormalElem[F, swingio.RadioButton[F]] = NormalElem(swingio.RadioButton[F])
+  def comboBox[A]: NormalElem[F, swingio.ComboBox[F, A]] = NormalElem(swingio.ComboBox[F, A])
+  def listView[A]: NormalElem[F, swingio.ListView[F, A]] = NormalElem(swingio.ListView[F][A])
 }

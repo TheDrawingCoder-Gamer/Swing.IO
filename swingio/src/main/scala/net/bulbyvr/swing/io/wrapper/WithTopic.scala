@@ -8,8 +8,13 @@ import cats.effect.syntax.all.*
 import cats.syntax.all.*
 import fs2.Stream
 trait WithTopic[F[_]](val topic: Topic[F, Event[F]])(using F: Async[F]) {
-
+  /**
+   * Called on the first subscriber. Used to add an event listener to the peer.
+   */
   protected def onFirstSubscribe: F[Unit]
+  /**
+   * Called on the last unsubscribe. Used to remove event listener from the peer.
+   */
   protected def onLastUnsubscribe: F[Unit]
 
   private[io] def setup: Resource[F, Unit] = {

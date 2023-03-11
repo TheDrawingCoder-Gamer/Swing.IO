@@ -10,6 +10,7 @@ import fs2.concurrent.Signal
 import cats.effect.syntax.all.*
 import cats.Contravariant
 import wrapper as swingio
+import fs2.Stream
 trait Modifier[F[_], E, A] { outer => 
   def modify(a: A, e: E): Resource[F, Unit]
   
@@ -40,19 +41,19 @@ object Modifier {
     _contravariant.asInstanceOf[Contravariant[[X] =>> Modifier[F, E, X]]]
 
   private[io] def forSignal[F[_], E, M, V](signal: M => Signal[F, V])(
-    mkModify: (M, E) => V => F[Unit])(using F: Async[F]): Modifier[F, E, M] = (m, e) => 
+    mkModify: (M, E) => V => Resource[F, Unit])(using F: Async[F]): Modifier[F, E, M] = (m, e) => 
     signal(m).getAndDiscreteUpdates.flatMap { (head, tail) => 
       val modify = mkModify(m, e)
-      Resource.eval(modify(head)) *>
-        (F.cede *> tail.foreach(modify(_)).compile.drain).background.void
+      modify(head) *>
+        (F.cede *> tail.flatMap(it => Stream.resource[F, Unit](modify(it))).compile.drain).background.void
     }
   private[io] def forSignalResource[F[_], E, M, V](signal: M => Resource[F, Signal[F, V]])(
-    mkModify: (M, E) => V => F[Unit])(using F: Async[F]): Modifier[F, E, M] = (m, e) => {
+    mkModify: (M, E) => V => Resource[F, Unit])(using F: Async[F]): Modifier[F, E, M] = (m, e) => {
       signal(m).flatMap { sig => 
         sig.getAndDiscreteUpdates.flatMap { (head, tail) => 
           val modify = mkModify(m, e)
-          Resource.eval(modify(head)) *>
-            (F.cede *> tail.foreach(modify(_)).compile.drain).background.void
+          modify(head) *>
+            (F.cede *> tail.flatMap(it => Stream.resource(modify(it))).compile.drain).background.void
         }
       }
     }

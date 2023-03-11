@@ -50,7 +50,7 @@ abstract class Component[F[_]](topic: Topic[F, event.Event[F]], dispatcher: Disp
   def revalidate: F[Unit] =
     F.delay { peer.revalidate() }.evalOn(AwtEventDispatchEC)
 
-  lazy val l: MouseListener = new MouseListener {
+  private lazy val l: MouseListener = new MouseListener {
     def mouseEntered(e: JMouseEvent): Unit = ()
     def mouseExited(e: JMouseEvent): Unit = ()
     def mouseClicked(e: JMouseEvent): Unit = 
@@ -59,8 +59,8 @@ abstract class Component[F[_]](topic: Topic[F, event.Event[F]], dispatcher: Disp
     def mousePressed(e: JMouseEvent): Unit = ()
     def mouseReleased(e: JMouseEvent): Unit = ()
   }
-  override def onFirstSubscribe: F[Unit] =
+  override protected def onFirstSubscribe: F[Unit] =
     F.delay { peer.addMouseListener(l) }.evalOn(AwtEventDispatchEC)
-  override def onLastUnsubscribe: F[Unit] =
+  override protected def onLastUnsubscribe: F[Unit] =
     F.delay { peer.removeMouseListener(l) }.evalOn(AwtEventDispatchEC)
 }

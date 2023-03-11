@@ -7,26 +7,52 @@ import net.bulbyvr.swing.io.wrapper.event.*
 import cats.effect.Resource
 import cats.syntax.all.*
 
+case class ComboBoxItem(item: String)
 object Main extends IOSwingApp {
+  val daItems = 
+    Seq(
+      ComboBoxItem("hi1"),
+      ComboBoxItem("hi2"),
+      ComboBoxItem("hi3")
+      )
   def render = 
-    SignallingRef[IO].of(false).product(SignallingRef[IO].of("")).toResource.flatMap { (smth, txt) => 
+    (SignallingRef[IO].of(false), SignallingRef[IO].of(""), SignallingRef[IO].of(daItems.head)).tupled.toResource.flatMap { (smth, txt, curItem) => 
       window(
       box(
         label(text <-- smth.map(_.toString())),
-        button(
-          text := "hi",
-          listen ~~>  {
-            _.collect { case ButtonClicked(_) => () }.evalMap(_ => smth.get).foreach(it => IO.println(it) *> smth.set(!it))
-          }
-          ),
-        textField.withSelf { self =>
-          (
-            text <-- txt,
-            listen ~~> {
-              _.collect { case _: ValueChanged[IO] => () }.evalMap(_ => self.text.get).foreach(txt.set)
+        flow(
+          button(
+            text := "hi",
+            listening {
+              _.collect { case ButtonClicked(_) => () }.evalMap(_ => smth.get).foreach(it => IO.println(it) *> smth.set(!it))
             }
-            )
-        }
+            ),
+          textField.withSelf { self =>
+            (
+              columns := 10,
+              listening {
+                _.collect { case _: ValueChanged[IO] => () }.evalMap(_ => self.text.get).foreach(txt.set)
+              }
+              )
+          }
+        ),
+        checkbox.withSelf {self => (
+          text := "boolean",
+          selected <-- smth,
+          listening {
+            _.collect { case ButtonClicked(_) => () }.evalMap(_ => self.selected.get).foreach(smth.set)
+          }
+          )
+        },
+        comboBox[ComboBoxItem].withSelf { self => (
+          items := this.daItems,
+          listening {
+            _.collect { case SelectionChanged(_) => () }.evalMap(_ => self.item.get).foreach(curItem.set)
+          },
+          renderer := { (it: ComboBoxItem) => {
+            it.item.pure[IO]
+          } }
+        )}
       ),
     
       title := "Hello World!",

@@ -3,6 +3,7 @@ package wrapper
 
 import cats.effect.Async
 import cats.effect.Ref
+import cats.effect.std.Dispatcher
 import javax.swing
 import java.awt
 import java.util as ju
@@ -64,8 +65,8 @@ trait UIElement[F[_]](using F: Async[F]) extends WithTopic[F] {
       _ <- UIElement.cache[F](this).toResource
     } yield ()
   // TODO
-  override def onFirstSubscribe: F[Unit] = F.unit
-  override def onLastUnsubscribe: F[Unit] = F.unit
+  override protected def onFirstSubscribe: F[Unit] = F.unit
+  override protected def onLastUnsubscribe: F[Unit] = F.unit
 }
 
 object UIElement  {
@@ -93,5 +94,12 @@ object UIElement  {
       .flatMap(topic => F.delay { new UIElement[F] with WithTopic[F](topic) { def peer = daPeer } }
       .toResource.flatTap(_.setup)
       .evalOn(AwtEventDispatchEC))
+  }
+  inline def buildApply[F[_], E <: UIElement[F]](build: (Dispatcher[F], Topic[F, event.Event[F]]) => E)(using F: Async[F]): Resource[F, E] = {
+    for {
+      topic <- Topic[F, event.Event[F]].toResource
+      dispatcher <- Dispatcher.sequential[F]
+      res <- F.delay { build(dispatcher, topic) }.toResource.flatTap(_.setup)
+    } yield res
   }
 }

@@ -35,7 +35,7 @@ sealed class SwingProp[F[_], A] private[io] {
 
 object SwingProp {
   trait Setter[F[_], E, A, V] {
-    def set(elem: E, value: V): F[Unit]
+    def set(elem: E, value: V): Resource[F, Unit]
   }
   trait Emits[F[_], E, A, Ev] {} 
   final class ConstantModifier[F[_], A, V] private[io] (
@@ -62,13 +62,13 @@ object SwingProp {
     )
   private[io] def listener[F[_], T <: swingio.event.Event[F]](target: swingio.WithTopic[F])
   (using F: Async[F], T: TypeTest[swingio.event.Event[F], T]): Stream[F, T] =
-    target.topic.subscribe(20).collect { case e: T => e }
+    target.topic.subscribe(5).collect { case e: T => e }
 }
 
 private trait PropModifiers[F[_]](using F: Async[F]) {
   import SwingProp.*
   given forConstantProp[A, E, V](using S: Setter[F, E, A, V]): Modifier[F, E, ConstantModifier[F, A, V]] =
-    (m, n) => Resource.eval(S.set(n, m.value))
+    (m, n) => S.set(n, m.value)
   given forSignalProp[E, A, V](using S: Setter[F, E, A, V]): Modifier[F, E, SignalModifier[F, A, V]] =
     Modifier.forSignal[F, E, SignalModifier[F, A, V], V](_.values) { (m, n) => 
       it => S.set(n, it)
@@ -93,28 +93,65 @@ private trait Props[F[_]](using A: Async[F]) extends LowPriorityProps[F] {
   //given textBtn[E <: AbstractButton[F]]: Setter[F, E, "text", String] =
   //  (e, v) => e.text.set(v)
   given textMost[E <: swingio.WithChangableText[F]]: Setter[F, E, "text", String] =
-    (e, v) => e.text.set(v)
+    (e, v) => e.text.set(v).toResource
   //given txtCompText[E <: TextComponent[F]]: Setter[F, E, "text", String] =
   //  (e, v) => e.text.set(v)
   lazy val text: SwingProp[F, "text"] = prop["text"]
   given richWindowTitle[E <: swingio.RichWindow[F]]: Setter[F, E, "title", String] =
-    (e, v) => e.title.set(v)
+    (e, v) => e.title.set(v).toResource
   lazy val title: SwingProp[F, "title"] = prop["title"]
   given rootPanelChild[E <: swingio.RootPanel[F], C <: swingio.Component[F]]: Setter[F, E, "child", C] =
-    (e, v) => e.child.set(Some(v))
+    (e, v) => e.child.set(Some(v)).toResource
   lazy val child: SwingProp[F, "child"] =
     prop["child"]
+
   given btnClick[E <: swingio.AbstractButton[F]]: Emits[F, E, "onClick", swingio.event.ButtonClicked[F]] = new Emits {}
   lazy val onClick: SwingProp[F, "onClick"] =
     prop["onClick"]
+
+  export swingio.Orientation
+  given orientationProp[E <: swingio.BoxPanel[F]]: Setter[F, E, "orientation", swingio.Orientation] =
+    (e, v) => e.orientation.set(v).toResource
+  lazy val orientation: SwingProp[F, "orientation"] =
+    prop["orientation"]
+
   // Listen allows one to listen to ALL possible events
-  given listen[E <: swingio.UIElement[F]]: Emits[F, E, "listen", swingio.event.Event[F]] = new Emits {}
+  given listenGiven[E <: swingio.UIElement[F]]: Emits[F, E, "listen", swingio.event.Event[F]] = new Emits {}
+
   lazy val listen: SwingProp[F, "listen"] =
     prop["listen"]
-  // given txtValueChanged[E <: TextComponent[F]]: Emits[F, E, "onValueChanged", ValueChanged[F]] = new Emits{}
-  // lazy val onValueChanged: SwingProp[F, "onValueChanged"] =
-  //   prop["onValueChanged"]
 
+  def listening(listenTo: Pipe[F, swingio.event.Event[F], Nothing]): PipeModifier[F, "listen", swingio.event.Event[F]] =
+    PipeModifier(listenTo)
+
+  export swingio.FlowPanel.Alignment as FlowAlignment
+  given alignmentProp[E <: swingio.FlowPanel[F]]: Setter[F, E, "alignment", swingio.FlowPanel.Alignment] =
+    (e, v) => e.alignment.set(v).toResource
+  lazy val alignment = prop["alignment"]
+
+  given selectedProp[E <: swingio.AbstractButton[F]]: Setter[F, E, "selected", Boolean] =
+    (e, v) => e.selected.set(v).toResource
+  lazy val selected = prop["selected"]
+
+  given colsProp[E <: swingio.TextComponent.HasColumns[F]]: Setter[F, E, "columns", Int] =
+    (e, v) => e.columns.set(v).toResource
+
+  lazy val columns = prop["columns"]
+
+  given rowsProp[E <: swingio.TextComponent.HasRows[F]]: Setter[F, E, "rows", Int] =
+    (e, v) => e.rows.set(v).toResource
+
+  lazy val rows = prop["rows"]
+
+  given rendererProp[A, E <: swingio.WithRenderer[F, A]]: Setter[F, E, "renderer", A => F[String]] =
+    (e, v) => swingio.ListView.Renderer.text[F, A] {
+      (s: Boolean, f: Boolean, a: A, i: Int) => v(a)
+    }.evalMap(e.renderer.set)
+  lazy val renderer = prop["renderer"]
+
+  given itemForComboBox[A, E <: swingio.ComboBox[F, A]]: Setter[F, E, "items", Seq[A]] =
+    (e, v) => e.items.set(v).toResource
+  lazy val items = prop["items"]
 }
 
 private trait LowPriorityProps[F[_]] (using F: Async[F]) {
