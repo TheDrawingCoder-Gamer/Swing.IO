@@ -43,9 +43,6 @@ lazy val swingio = project
   .in(file("swingio"))
   .settings(
     name := "swing-io",
-    version := "0.1.0-SNAPSHOT",
-
-
     libraryDependencies += "org.scalameta" %% "munit" % "0.7.29" % Test,
     libraryDependencies += "org.scala-lang.modules" %% "scala-swing" % "3.0.0",
     libraryDependencies += "org.typelevel" %% "cats-effect" % "3.4.8",
@@ -56,18 +53,17 @@ lazy val swingio = project
     libraryDependencies += "org.slf4j" % "slf4j-simple" % "2.0.6" % Test,
   )
 lazy val simple = project
+  .enablePlugins(NoPublishPlugin)
   .in(file("simple"))
   .dependsOn(swingio)
   .settings(
     name := "simple",
-    publish / skip := true,
     assembly / assemblyJarName := "assembly.jar",
-    // Compile / run / fork := true
   )
 
 lazy val root = 
-  project.aggregate(swingio, simple).settings(
-    publish / skip := true
-  )
+  project
+  .enablePlugins(NoPublishPlugin)
+  .aggregate(swingio, simple)
 
 
