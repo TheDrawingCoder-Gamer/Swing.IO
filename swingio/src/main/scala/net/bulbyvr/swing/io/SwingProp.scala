@@ -20,12 +20,12 @@ sealed class SwingProp[F[_], A] private[io] {
     SignalResourceModifier(vs)
   // def <--[V](v: Resource[F, V]): ResourceModifier[F, A, V] =
   //  ResourceModifier(v)
-  def -->[Ev](listener: Pipe[F, Ev, Nothing]): PipeModifier[F, A, Ev] =
-    PipeModifier(listener)
+  // def -->[Ev](listener: Pipe[F, Ev, Nothing]): PipeModifier[F, A, Ev] =
+  //  PipeModifier(listener)
   // more specific listener that always infers correctly :sob:
   // Only really works with listen
-  def ~~>(listener: Pipe[F, swingio.event.Event[F], Nothing]): PipeModifier[F, A, swingio.event.Event[F]] =
-    PipeModifier(listener)
+  // def ~~>(listener: Pipe[F, swingio.event.Event[F], Nothing]): PipeModifier[F, A, swingio.event.Event[F]] =
+  //  PipeModifier(listener)
   // Option isn't real, it can't hurt you
   // inline def <--(vs: Signal[F, Option[V]]): OptionSignalModifier[F, E, V] =
   //  OptionSignalModifier(setter, vs)
@@ -33,6 +33,11 @@ sealed class SwingProp[F[_], A] private[io] {
   //  OptionSignalResourceModifier(setter, vs)
 }
 
+sealed class EventProp[F[_], A, Ev] private[io] {
+  import SwingProp.*
+  def -->(listener: Pipe[F, Ev, Nothing]): PipeModifier[F, A, Ev] =
+    PipeModifier(listener)
+}
 object SwingProp {
   trait Setter[F[_], E, A, V] {
     def set(elem: E, value: V): Resource[F, Unit]
@@ -80,7 +85,7 @@ private trait PropModifiers[F[_]](using F: Async[F]) {
   given forResource[E, A, V](using S: Setter[F, E, A, V]): Modifier[F, E, ResourceModifier[F, A, V]] =
     (m, n) => m.value.map(S.set(n, _))
 
-  given forPipeEventProp[E <: swingio.UIElement[F], A, Ev <: swingio.event.Event[F]](using E: Emits[F, E, A, Ev], T: TypeTest[swingio.event.Event[F], Ev])
+  given forPipeEventProp[E <: swingio.UIElement[F], A, Ev <: swingio.event.Event[F]](using T: TypeTest[swingio.event.Event[F], Ev])
   : Modifier[F, E, PipeModifier[F, A, Ev]] = 
     (m, t) => (F.cede *> listener[F, Ev](t).through(m.sink).compile.drain).background.void
 
@@ -90,6 +95,8 @@ private trait Props[F[_]](using A: Async[F]) extends LowPriorityProps[F] {
   import SwingProp.*
   def prop[A]: SwingProp[F, A] =
     SwingProp[F, A]
+  def eventProp[A, Ev]: EventProp[F, A, Ev] =
+    EventProp[F, A, Ev]
   //given textBtn[E <: AbstractButton[F]]: Setter[F, E, "text", String] =
   //  (e, v) => e.text.set(v)
   given textMost[E <: swingio.WithChangableText[F]]: Setter[F, E, "text", String] =
@@ -105,21 +112,15 @@ private trait Props[F[_]](using A: Async[F]) extends LowPriorityProps[F] {
   lazy val child: SwingProp[F, "child"] =
     prop["child"]
 
-  given btnClick[E <: swingio.AbstractButton[F]]: Emits[F, E, "onClick", swingio.event.ButtonClicked[F]] = new Emits {}
-  lazy val onClick: SwingProp[F, "onClick"] =
-    prop["onClick"]
+  lazy val onBtnClick =
+    eventProp["onBtnClick", swingio.event.ButtonClicked[F]]
+
 
   export swingio.Orientation
   given orientationProp[E <: swingio.BoxPanel[F]]: Setter[F, E, "orientation", swingio.Orientation] =
     (e, v) => e.orientation.set(v).toResource
   lazy val orientation: SwingProp[F, "orientation"] =
     prop["orientation"]
-
-  // Listen allows one to listen to ALL possible events
-  given listenGiven[E <: swingio.UIElement[F]]: Emits[F, E, "listen", swingio.event.Event[F]] = new Emits {}
-
-  lazy val listen: SwingProp[F, "listen"] =
-    prop["listen"]
 
   def listening(listenTo: Pipe[F, swingio.event.Event[F], Nothing]): PipeModifier[F, "listen", swingio.event.Event[F]] =
     PipeModifier(listenTo)
@@ -152,6 +153,12 @@ private trait Props[F[_]](using A: Async[F]) extends LowPriorityProps[F] {
   given itemForComboBox[A, E <: swingio.ComboBox[F, A]]: Setter[F, E, "items", Seq[A]] =
     (e, v) => e.items.set(v).toResource
   lazy val items = prop["items"]
+
+  lazy val onMouseClick = eventProp["onMouseClick", swingio.event.MouseClicked[F]]
+
+  lazy val onSelectionChange = eventProp["onSelectionChange", swingio.event.SelectionChanged[F]]
+
+  lazy val onValueChange = eventProp["onValueChange", swingio.event.ValueChanged[F]]
 }
 
 private trait LowPriorityProps[F[_]] (using F: Async[F]) {

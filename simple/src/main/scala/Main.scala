@@ -23,15 +23,15 @@ object Main extends IOSwingApp {
         flow(
           button(
             text := "hi",
-            listening {
-              _.collect { case ButtonClicked(_) => () }.evalMap(_ => smth.get).foreach(it => IO.println(it) *> smth.set(!it))
+            onBtnClick --> {
+              _.evalMap(_ => smth.get).foreach(it => IO.println(it) *> smth.set(!it))
             }
             ),
           textField.withSelf { self =>
             (
               columns := 10,
-              listening {
-                _.collect { case _: ValueChanged[IO] => () }.evalMap(_ => self.text.get).foreach(txt.set)
+              onValueChange --> {
+                _.evalMap(_ => self.text.get).foreach(txt.set)
               }
               )
           }
@@ -39,15 +39,15 @@ object Main extends IOSwingApp {
         checkbox.withSelf {self => (
           text := "boolean",
           selected <-- smth,
-          listening {
-            _.collect { case ButtonClicked(_) => () }.evalMap(_ => self.selected.get).foreach(smth.set)
+          onBtnClick --> {
+            _.evalMap(_ => self.selected.get).foreach(smth.set)
           }
           )
         },
         comboBox[ComboBoxItem].withSelf { self => (
           items := this.daItems,
-          listening {
-            _.collect { case SelectionChanged(_) => () }.evalMap(_ => self.item.get).foreach(curItem.set)
+          onSelectionChange --> {
+            _.evalMap(_ => self.item.get).foreach(curItem.set)
           },
           renderer := { (it: ComboBoxItem) => {
             it.item.pure[IO]

@@ -1,8 +1,43 @@
 val scala3Version = "3.2.2"
 
+ThisBuild / tlBaseVersion := "0.1"
 ThisBuild / scalacOptions ++= Seq("-old-syntax", "-no-indent", "-source:future", "-Ykind-projector:underscores")
 ThisBuild / scalaVersion := scala3Version
-ThisBuild / organization := "io.github.TheDrawingCoder-Gamer"
+ThisBuild / startYear := Some(2023)
+ThisBuild / organization := "io.github.thedrawingcoder-gamer"
+ThisBuild / organizationName := "BulbyVR"
+ThisBuild / organizationHomepage := Some(url("https://thedrawingcoder-gamer.github.io/"))
+ThisBuild / scmInfo := Some(
+  ScmInfo(
+    url("https://github.com/TheDrawingCoder-Gamer/Swing.IO"),
+    "scm:git@github.com:TheDrawingCoder-Gamer/Swing.IO.git"
+  )
+)
+ThisBuild / developers := List(
+  Developer(
+    id = "bulbyvr",
+    name = "Ben Harless",
+    email = "benharless820@gmail.com",
+    url = url("https://thedrawingcoder-gamer.github.io/")
+  )
+)
+ThisBuild / tlSonatypeUseLegacyHost := false
+ThisBuild / description := "Swing in the IO Monad"
+ThisBuild / licenses := List(
+  "Apache 2" -> new URL("http://www.apache.org/licenses/LICENSE-2.0.txt")
+)
+ThisBuild / homepage := Some(url("https://github.com/TheDrawingCoder-Gamer/Swing.IO"))
+
+ThisBuild / pomIncludeRepository := { _ => false }
+ThisBuild / publishMavenStyle := true
+ThisBuild / publishTo := {
+  val sonatype = "https://s01.oss.sonatype.org/"
+  if (isSnapshot.value)
+    Some("snapshots" at sonatype + "content/repositories/snapshots")
+  else
+    Some("releases" at sonatype + "service/local/staging/deploy/maven2")
+}
+
 lazy val swingio = project
   .in(file("swingio"))
   .settings(
@@ -24,9 +59,14 @@ lazy val simple = project
   .dependsOn(swingio)
   .settings(
     name := "simple",
+    publish / skip := true,
     assembly / assemblyJarName := "assembly.jar",
     // Compile / run / fork := true
   )
 
 lazy val root = 
-  project.aggregate(swingio, simple)
+  project.aggregate(swingio, simple).settings(
+    publish / skip := true
+  )
+
+
