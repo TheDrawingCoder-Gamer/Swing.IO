@@ -7,6 +7,7 @@ ThisBuild / startYear := Some(2023)
 ThisBuild / organization := "io.github.thedrawingcoder-gamer"
 ThisBuild / organizationName := "BulbyVR"
 ThisBuild / organizationHomepage := Some(url("https://thedrawingcoder-gamer.github.io/"))
+ThisBuild / tlCiReleaseBranches := Seq("master")
 ThisBuild / scmInfo := Some(
   ScmInfo(
     url("https://github.com/TheDrawingCoder-Gamer/Swing.IO"),
