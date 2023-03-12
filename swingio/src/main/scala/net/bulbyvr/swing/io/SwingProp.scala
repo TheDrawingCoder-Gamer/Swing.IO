@@ -10,6 +10,7 @@ import scala.reflect.TypeTest
 import scala.reflect.ClassTag
 import java.awt.Window
 import wrapper as swingio
+import javax.swing.UIManager
 sealed class SwingProp[F[_], A] private[io] {
   import SwingProp.*
   def :=[V](v: V): ConstantModifier[F, A, V] =
@@ -168,6 +169,10 @@ private trait Props[F[_]](using A: Async[F]) extends LowPriorityProps[F] {
   given iconPropNone[A, E <: swingio.WithIcon[F]]: Setter[F, E, "icon", Option[Nothing]] =
     (e, v) => e.icon.set(v).toResource
   lazy val icon = prop["icon"]
+
+  given lookAndFeelProp[E <: swingio.MainFrame[F]]: Setter[F, E, "lookAndFeel", String] =
+    (e, v) => A.delay { UIManager.setLookAndFeel(v) }.evalOn(AwtEventDispatchEC).toResource
+  lazy val lookAndFeel = prop["lookAndFeel"]
 }
 
 private trait LowPriorityProps[F[_]] (using F: Async[F]) {

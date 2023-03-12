@@ -37,9 +37,25 @@ object ListView {
     protected def render(isSelected: Boolean, focused: Boolean, a: A, index: Int): Resource[F, Component[F]]
   }
   trait TextRenderer[F[_]: Async, -A](dispatcher: Dispatcher[F]) extends Renderer[F, A] {
-    override lazy val peer: ListCellRenderer[? >: A] = new ListCellRenderer[A] {
+    override lazy val peer: ListCellRenderer[? >: A] = new JLabel with ListCellRenderer[A] {
+      setOpaque(true)
+      private val defaults = javax.swing.UIManager.getDefaults()
+      private val bg = defaults.get("ComboBox.background").asInstanceOf[java.awt.Color]
+      private val fg = defaults.get("ComboBox.foreground").asInstanceOf[java.awt.Color]
+      private val selBg = defaults.get("ComboBox.selectionBackground").asInstanceOf[java.awt.Color]
+      private val selFg = defaults.get("ComboBox.selectionForeground").asInstanceOf[java.awt.Color]
+
       def getListCellRendererComponent(list: JList[? <: A], a: A, index: Int, isSelected: Boolean, focused: Boolean): JComponent = {
-        JLabel(dispatcher.unsafeRunSync[String](render(isSelected, focused, a, index)))
+        this.setText(dispatcher.unsafeRunSync[String](render(isSelected, focused, a, index)))
+
+        if (isSelected) {
+          setBackground(selBg)
+          setForeground(selFg)
+        } else {
+          setBackground(bg)
+          setForeground(fg)
+        }
+        this
       }
     }
     protected def render(isSelected: Boolean, focused: Boolean, a: A, index: Int): F[String]
