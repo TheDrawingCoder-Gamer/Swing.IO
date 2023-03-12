@@ -159,6 +159,15 @@ private trait Props[F[_]](using A: Async[F]) extends LowPriorityProps[F] {
   lazy val onSelectionChange = eventProp["onSelectionChange", swingio.event.SelectionChanged[F]]
 
   lazy val onValueChange = eventProp["onValueChange", swingio.event.ValueChanged[F]]
+
+  given iconProp[A, E <: swingio.WithIcon[F]]: Setter[F, E, "icon", swingio.Image[F]] =
+    (e, v) => e.icon.set(Some(swingio.ImageIcon[F](v))).toResource
+  given iconPropReal[A, E <: swingio.WithIcon[F], I <: swingio.Icon[F]]: Setter[F, E, "icon", swingio.Icon[F]] =
+    (e, v) => e.icon.set(Some(v)).toResource
+  // shenanagins ensue
+  given iconPropNone[A, E <: swingio.WithIcon[F]]: Setter[F, E, "icon", Option[Nothing]] =
+    (e, v) => e.icon.set(v).toResource
+  lazy val icon = prop["icon"]
 }
 
 private trait LowPriorityProps[F[_]] (using F: Async[F]) {
