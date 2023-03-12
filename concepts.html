@@ -81,6 +81,8 @@
 
         <ul class="nav-list">
           <li class="level1"><a href="#components-and-resource-management">Components and resource management</a></li>
+          <li class="level1"><a href="#signals">Signals</a></li>
+          <li class="level1"><a href="#glitch-free-rendering">Glitch-free rendering</a></li>
         </ul>
 
         <p class="footer"></p>
@@ -90,6 +92,7 @@
 
         <h1 id="core-concepts" class="title">Core Concepts</h1>
         <p>Similar to <strong>Calico</strong>, <strong>Swing.IO</strong> takes its concepts from Cats Effect and FS2. This page lists some common idioms used in Swing.IO development.</p>
+        <p>Note: Some of these docs were copied from <a href="https://www.armanbilge.com/calico/concepts.html">Calico</a>, as these are very similar projects with a similar basis.</p>
         
         <h2 id="components-and-resource-management" class="section">Components and resource management<a class="anchor-link right" href="#components-and-resource-management"><i class="icofont-laika">&#xef71;</i></a></h2>
         <p>The most important idea of <strong>Swing.IO</strong> is that all components are represented as a <code>Resource[IO, Component[IO]]</code>.</p>
@@ -111,7 +114,64 @@
 
 </span><span class="keyword">val</span><span> </span><span class="identifier">component</span><span>: </span><span class="type-name">Resource</span><span>[</span><span class="type-name">IO</span><span>, </span><span class="type-name">Component</span><span>[</span><span class="type-name">IO</span><span>]] = </span><span class="identifier">box</span><span>(</span><span class="string-literal">&quot;Hello, checkbox:&quot;</span><span>, </span><span class="identifier">checkbox</span><span>())</span></code></pre>
         <p>In this example, a checkbox that does nothing composes together to create a <code>Resource</code></p>
-        <p>TODO: Complete docs LATER™</p>
+        
+        <h2 id="signals" class="section">Signals<a class="anchor-link right" href="#signals"><i class="icofont-laika">&#xef71;</i></a></h2>
+        <p><code>Signal</code>s are time varying values. You can always obtain the current value and subscribe to stream of update events that notify when it is updated. 
+        This is ideal for use in UI Components: they can always render immediately with the current value, and re-render only when there are updates.</p>
+        <p><code>Signal</code> is a monad, enabling them to be transformed with pure functions and composed with each other. 
+        Using transformation and composition, you can derive a <code>Signal</code> that contains precisely the data you are interested in.</p>
+        <pre><code class="nohighlight"><span class="keyword">import</span><span> </span><span class="identifier">cats</span><span>.</span><span class="identifier">syntax</span><span>.</span><span class="identifier">all</span><span>.*
+
+</span><span class="keyword">case</span><span> </span><span class="keyword">class</span><span> </span><span class="type-name">S3Weapon</span><span>(</span><span class="identifier">name</span><span>: </span><span class="type-name">String</span><span>)
+</span><span class="keyword">enum</span><span> </span><span class="type-name">Games</span><span> {
+	</span><span class="keyword">case</span><span> </span><span class="type-name">Splatoon1</span><span>
+	</span><span class="keyword">case</span><span> </span><span class="type-name">Splatoon2</span><span>
+	</span><span class="keyword">case</span><span> </span><span class="type-name">Splatoon3</span><span>
+}
+</span><span class="keyword">val</span><span> </span><span class="identifier">signals</span><span> = (
+  </span><span class="type-name">SignallingRef</span><span>[</span><span class="type-name">IO</span><span>].</span><span class="identifier">of</span><span>(</span><span class="type-name">S3Weapon</span><span>(</span><span class="string-literal">&quot;52 Gal&quot;</span><span>)),
+  </span><span class="type-name">SignallingRef</span><span>[</span><span class="type-name">IO</span><span>].</span><span class="identifier">of</span><span>(</span><span class="type-name">Games</span><span>.</span><span class="type-name">Splatoon3</span><span>),
+)
+
+</span><span class="keyword">val</span><span> </span><span class="identifier">weapons</span><span>: </span><span class="type-name">Seq</span><span>[</span><span class="type-name">S3Weapon</span><span>] = </span><span class="type-name">Seq</span><span>(???)
+
+</span><span class="keyword">val</span><span> </span><span class="identifier">app</span><span> = </span><span class="identifier">signals</span><span>.</span><span class="identifier">flatMap</span><span> { (</span><span class="identifier">weaponSig</span><span>, </span><span class="identifier">gameSig</span><span>) =&gt; </span><span class="identifier">window</span><span>(
+  	 </span><span class="identifier">flow</span><span>(
+	    </span><span class="identifier">comboBox</span><span>[</span><span class="type-name">S3Weapon</span><span>].</span><span class="identifier">withSelf</span><span> { </span><span class="identifier">self</span><span> =&gt; (
+	      </span><span class="identifier">items</span><span> := </span><span class="identifier">weapons</span><span>,
+	      </span><span class="identifier">renderer</span><span> := { (</span><span class="identifier">it</span><span>: </span><span class="type-name">S3Weapon</span><span>) =&gt; </span><span class="identifier">it</span><span>.</span><span class="identifier">name</span><span> },
+	      </span><span class="identifier">onSelectionChange</span><span> --&gt; {
+		</span><span class="identifier">_</span><span>.</span><span class="identifier">foreach</span><span>(</span><span class="identifier">_</span><span> =&gt; </span><span class="identifier">self</span><span>.</span><span class="identifier">value</span><span>.</span><span class="identifier">get</span><span>.</span><span class="identifier">flatMap</span><span>(</span><span class="identifier">weaponSig</span><span>.</span><span class="identifier">set</span><span>))
+	      }
+	    )},
+	    </span><span class="identifier">comboBox</span><span>[</span><span class="type-name">Games</span><span>].</span><span class="identifier">withSelf</span><span> { </span><span class="identifier">self</span><span> =&gt; (
+	      </span><span class="identifier">items</span><span> := </span><span class="type-name">Seq</span><span>(</span><span class="type-name">Games</span><span>.</span><span class="type-name">Splatoon1</span><span>, </span><span class="type-name">Games</span><span>.</span><span class="type-name">Splatoon2</span><span>, </span><span class="type-name">Games</span><span>.</span><span class="type-name">Splatoon3</span><span>),
+	      </span><span class="identifier">onSelectionChange</span><span> --&gt; {
+		</span><span class="identifier">_</span><span>.</span><span class="identifier">foreach</span><span>(</span><span class="identifier">_</span><span> =&gt; </span><span class="identifier">self</span><span>.</span><span class="identifier">value</span><span>.</span><span class="identifier">get</span><span>.</span><span class="identifier">flatMap</span><span>(</span><span class="identifier">gameSig</span><span>.</span><span class="identifier">set</span><span>))
+	      }
+	    )}
+	 )
+  ) 
+  }</span></code></pre>
+        <p>There are various ways to obtain a <code>Signal</code>.</p>
+        <ul>
+          <li>
+            <p>Create a <code>SignallingRef</code> with an initial value.</p>
+            <pre class="keep-together pdf epub"><code class="nohighlight"><span class="type-name">SignallingRef</span><span>[</span><span class="type-name">IO</span><span>].</span><span class="identifier">of</span><span>(</span><span class="string-literal">&quot;initial value&quot;</span><span>)</span></code></pre>
+          </li>
+          <li>
+            <p>Derive a <code>Signal</code> from a <code>Stream</code>, by “holding” its latest value.</p>
+            <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">def</span><span> </span><span class="declaration-name">stringStream</span><span>: </span><span class="type-name">Stream</span><span>[</span><span class="type-name">IO</span><span>, </span><span class="type-name">String</span><span>] = ???
+</span><span class="identifier">stringStream</span><span>.</span><span class="identifier">holdResource</span><span>(</span><span class="string-literal">&quot;initial value&quot;</span><span>)
+</span><span class="identifier">stringStream</span><span>.</span><span class="identifier">holdOptionResource</span><span> </span><span class="comment">// use None for the intitial value</span></code></pre>
+          </li>
+        </ul>
+        
+        <h2 id="glitch-free-rendering" class="section">Glitch-free rendering<a class="anchor-link right" href="#glitch-free-rendering"><i class="icofont-laika">&#xef71;</i></a></h2>
+        <p>Swing forces all access to swing components to be on the Event Dispatch Thread. This ensures that rendering is glitch-free. 
+        <strong>Swing.IO</strong> automatically handles this by evaluating all access to swing components on the EDT, and it lets Cats Effect
+        handle anything that doesn&#39;t touch swing components. This means you get all the benefits of multithreading your Swing app
+        without the hassle of having to deal with the EDT.</p>
 
         <hr style="margin-top: 30px"/>
         <footer style="font-size: 90%; text-align: center">
