@@ -18,14 +18,6 @@ sealed class SwingProp[F[_], A] private[io] {
     SignalModifier(vs)
   def <--[V](vs: Resource[F, Signal[F, V]]): SignalResourceModifier[F, A, V] =
     SignalResourceModifier(vs)
-  // def <--[V](v: Resource[F, V]): ResourceModifier[F, A, V] =
-  //  ResourceModifier(v)
-  // def -->[Ev](listener: Pipe[F, Ev, Nothing]): PipeModifier[F, A, Ev] =
-  //  PipeModifier(listener)
-  // more specific listener that always infers correctly :sob:
-  // Only really works with listen
-  // def ~~>(listener: Pipe[F, swingio.event.Event[F], Nothing]): PipeModifier[F, A, swingio.event.Event[F]] =
-  //  PipeModifier(listener)
   // Option isn't real, it can't hurt you
   // inline def <--(vs: Signal[F, Option[V]]): OptionSignalModifier[F, E, V] =
   //  OptionSignalModifier(setter, vs)
