@@ -44,6 +44,7 @@ object ComboBox {
     for {
       dispatcher <- Dispatcher.sequential[F]
       topic <- Topic[F, event.Event[F]].toResource
-      res <- Async[F].delay { new ComboBox[F, A](dispatcher, topic) }.evalOn(AwtEventDispatchEC).toResource
+      // Setup wasn't here before :broken_heart:
+      res <- Async[F].delay { new ComboBox[F, A](dispatcher, topic) }.toResource.flatTap(_.setup).evalOn(AwtEventDispatchEC)
     } yield res
 }
