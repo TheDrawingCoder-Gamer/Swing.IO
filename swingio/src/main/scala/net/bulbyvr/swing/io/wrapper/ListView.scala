@@ -27,15 +27,10 @@ object ListView {
   trait Renderer[F[_]: Async, -A] {
     def peer: ListCellRenderer[? >: A]
   }
-  trait AbstractRenderer[F[_]: Async, -A](dispatcher: Dispatcher[F]) extends Renderer[F, A] {
-    private val hotswaps: mut.HashMap[Int, Hotswap[F, Component[F]]] = mut.HashMap()
+  trait AbstractRenderer[F[_]: Async, -A](dispatcher: Dispatcher[F], hotswap: Hotswap[F, Component[F]]) extends Renderer[F, A] {
     override lazy val peer:  ListCellRenderer[? >: A] = new ListCellRenderer[A] {
       def getListCellRendererComponent(list: JList[? <: A], a: A, index: Int, isSelected: Boolean, focused: Boolean): JComponent = {
-        if (!hotswaps.contains(index)) {
-          // This leaks but it's less awful than leaking every single component with its event listeners
-          hotswaps(index) = dispatcher.unsafeRunSync[Hotswap[F, Component[F]]](Hotswap.create[F, Component[F]].allocated.map(_._1))
-        }
-        val comp = dispatcher.unsafeRunSync[Component[F]](hotswaps(index).swap(render(isSelected, focused, a, index)))
+        val comp = dispatcher.unsafeRunSync[Component[F]](hotswap.swap(render(isSelected, focused, a, index)))
         comp.peer
       }
     } 
@@ -53,7 +48,8 @@ object ListView {
     def apply[F[_]: Async, A](fn: (Boolean, Boolean, A, Int) => Resource[F, Component[F]]): Resource[F, Renderer[F, A]] = {
       for {
         dispatcher <- Dispatcher.sequential[F]
-        res <- Async[F].delay { new AbstractRenderer[F, A](dispatcher) { 
+        hotswap <- Hotswap.create[F, Component[F]]
+        res <- Async[F].delay { new AbstractRenderer[F, A](dispatcher, hotswap) { 
           override protected def render(s: Boolean, f: Boolean, a: A, index: Int) = fn(s, f, a, index)
         } }.toResource
       } yield res

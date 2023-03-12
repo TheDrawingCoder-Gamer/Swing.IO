@@ -14,6 +14,8 @@ sealed class SwingProp[F[_], A] private[io] {
   import SwingProp.*
   def :=[V](v: V): ConstantModifier[F, A, V] =
     ConstantModifier(v)
+  def :=[V](v: Resource[F, V]): ResourceModifier[F, A, V] =
+    ResourceModifier(v)
   def <--[V](vs: Signal[F, V]): SignalModifier[F, A, V] =
     SignalModifier(vs)
   def <--[V](vs: Resource[F, Signal[F, V]]): SignalResourceModifier[F, A, V] =
@@ -75,7 +77,7 @@ private trait PropModifiers[F[_]](using F: Async[F]) {
       (m, n) => it => S.set(n, it)
     }
   given forResource[E, A, V](using S: Setter[F, E, A, V]): Modifier[F, E, ResourceModifier[F, A, V]] =
-    (m, n) => m.value.map(S.set(n, _))
+    (m, n) => m.value.flatMap(S.set(n, _))
 
   given forPipeEventProp[E <: swingio.UIElement[F], A, Ev <: swingio.event.Event[F]](using T: TypeTest[swingio.event.Event[F], Ev])
   : Modifier[F, E, PipeModifier[F, A, Ev]] = 
@@ -140,6 +142,12 @@ private trait Props[F[_]](using A: Async[F]) extends LowPriorityProps[F] {
     (e, v) => swingio.ListView.Renderer.text[F, A] {
       (s: Boolean, f: Boolean, a: A, i: Int) => v(a)
     }.evalMap(e.renderer.set)
+  given rendererPropNoEval[A, E <: swingio.WithRenderer[F, A]]: Setter[F, E, "renderer", A => String] =
+    (e, v) => swingio.ListView.Renderer.text[F, A] {
+      (s: Boolean, f: Boolean, a: A, i: Int) => v(a).pure
+    }.evalMap(e.renderer.set)
+  given rendererRealProp[A, E <: swingio.WithRenderer[F, A]]: Setter[F, E, "renderer", swingio.ListView.Renderer[F, A]] =
+    (e, v) => e.renderer.set(v).toResource
   lazy val renderer = prop["renderer"]
 
   given itemForComboBox[A, E <: swingio.ComboBox[F, A]]: Setter[F, E, "items", Seq[A]] =

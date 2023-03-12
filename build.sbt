@@ -44,7 +44,6 @@ lazy val swingio = project
   .settings(
     name := "swing-io",
     libraryDependencies += "org.scalameta" %% "munit" % "0.7.29" % Test,
-    libraryDependencies += "org.scala-lang.modules" %% "scala-swing" % "3.0.0",
     libraryDependencies += "org.typelevel" %% "cats-effect" % "3.4.8",
     libraryDependencies += "co.fs2" %% "fs2-core" % "3.6.1",
     libraryDependencies += "org.typelevel" %% "log4cats-core" % "2.5.0",
