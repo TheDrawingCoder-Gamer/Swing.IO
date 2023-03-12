@@ -9,7 +9,7 @@ ThisBuild / organizationName := "BulbyVR"
 ThisBuild / organizationHomepage := Some(url("https://thedrawingcoder-gamer.github.io/"))
 
 ThisBuild / tlCiReleaseBranches := Seq("master")
-ThisBuild / tlSitePublishBranch := Some("gh-pages")
+ThisBuild / tlSitePublishBranch := Some("master")
 ThisBuild / scmInfo := Some(
   ScmInfo(
     url("https://github.com/TheDrawingCoder-Gamer/Swing.IO"),
