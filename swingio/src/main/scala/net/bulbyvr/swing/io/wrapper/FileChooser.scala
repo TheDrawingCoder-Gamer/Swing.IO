@@ -7,7 +7,7 @@ import java.io.File
 import cats.effect.syntax.all.*
 import cats.syntax.all.*
 object FileChooser {
-  private class PartiallyAppliedApply[F[_]: Async] {
+  private[io] class PartiallyAppliedApply[F[_]: Async] {
     private def getFC: F[JFileChooser] =
       Async[F].delay { JFileChooser() }.evalOn(AwtEventDispatchEC)
     private def showDialog(show: JFileChooser => Int): F[(Int, JFileChooser)] = 
@@ -28,4 +28,5 @@ object FileChooser {
     def open: F[Option[File]] = showOpenDialog(_.showOpenDialog(null))
 
   }
+  def apply[F[_]: Async]: PartiallyAppliedApply[F] = new PartiallyAppliedApply[F]
 }
