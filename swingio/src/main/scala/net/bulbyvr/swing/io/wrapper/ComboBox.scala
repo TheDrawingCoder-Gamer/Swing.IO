@@ -10,7 +10,7 @@ import effect.std.Dispatcher
 import fs2.concurrent.Topic
 
 import javax.swing.JComboBox
-import java.awt.event.{ItemListener, ItemEvent}
+import java.awt.event.{ActionListener, ActionEvent}
 
 class ComboBox[F[_]: Async, A](dispatcher: Dispatcher[F], topic: Topic[F, event.Event[F]]) extends Component[F](topic, dispatcher) with WithRenderer[F, A] {
   override lazy val peer: JComboBox[A] = new JComboBox[A]() with SuperMixin
@@ -26,16 +26,16 @@ class ComboBox[F[_]: Async, A](dispatcher: Dispatcher[F], topic: Topic[F, event.
 
   def items: RefSink[F, Seq[A]] = WrappedSink { it => peer.removeAllItems(); it.foreach(peer.addItem) }
 
-  private lazy val il: ItemListener = new ItemListener {
-    def itemStateChanged(e: ItemEvent): Unit = {
+  private lazy val il: ActionListener = new ActionListener {
+    def actionPerformed(e: ActionEvent): Unit = {
       dispatcher.unsafeRunAndForget(topic.publish1(new event.SelectionChanged(ComboBox.this)))
     } 
   }
 
   override protected def onFirstSubscribe = 
-    super.onFirstSubscribe *> Async[F].delay {peer.addItemListener(il)}.evalOn(AwtEventDispatchEC)
+    super.onFirstSubscribe *> Async[F].delay {peer.addActionListener(il)}.evalOn(AwtEventDispatchEC)
   override protected def onLastUnsubscribe =
-    super.onLastUnsubscribe *> Async[F].delay { peer.removeItemListener(il) }.evalOn(AwtEventDispatchEC)
+    super.onLastUnsubscribe *> Async[F].delay { peer.removeActionListener(il) }.evalOn(AwtEventDispatchEC)
 
 }
 
