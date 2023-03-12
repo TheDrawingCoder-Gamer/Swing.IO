@@ -1,10 +1,10 @@
 # Core Concepts
 
-Similar to *Calico*, *Swing.IO* takes its concepts from Cats Effect and FS2. This page lists some common idioms used in Swing.IO development.
+Similar to **Calico**, **Swing.IO** takes its concepts from Cats Effect and FS2. This page lists some common idioms used in Swing.IO development.
 
 ## Components and resource management
 
-The most important idea of *Swing.IO* is that all components are represented as a `Resource[IO, Component[IO]]`.
+The most important idea of **Swing.IO** is that all components are represented as a `Resource[IO, Component[IO]]`.
 
 ```scala
 import cats.effect.*
@@ -23,7 +23,7 @@ Because a `Resource[IO, Component[IO]]` can be used multiple times, it can behav
 One caveat with this is the main window - to handle closing correctly, it's expressed as a `Resource[IO, (MainFrame[IO], Deferred[F, Unit])]`. 
 The `IOSwingApp` surrounds the lock and the main window takes the lock as an argument, which is completed when the app closes.
 
-*Swing.IO* provides an idiomatic DSL for describing swing components.
+**Swing.IO** provides an idiomatic DSL for describing swing components.
 
 ```scala
 import net.bulbyvr.swing.io.all.{*, given}
