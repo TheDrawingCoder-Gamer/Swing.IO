@@ -4,6 +4,10 @@ package wrapper
 import cats.effect.Async
 import cats.syntax.all.*
 import cats.effect.syntax.all.*
+/**
+ * A container that makes sense for its contents to be mutable
+ * Usually for components that are sequential, like the Box and Flow panel
+ */
 trait MutableContainer[F[_]](using F: Async[F]) extends Container[F] {
   override def peer: javax.swing.JComponent
   override def contents: F[Seq[Component[F]]] =

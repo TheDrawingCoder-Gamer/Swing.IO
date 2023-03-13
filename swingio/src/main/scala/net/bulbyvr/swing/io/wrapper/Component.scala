@@ -16,6 +16,9 @@ abstract class Component[F[_]](topic: Topic[F, event.Event[F]], dispatcher: Disp
   trait SuperMixin {}
   // TODO: Support custom painting
   // Doing that requires wrapping Graphics2D which is kinda a lot
+  /**
+   * Name of component, for use with e.g. synth
+   */
   def name: Ref[F, String] =
     new WrappedRef(peer.getName, peer.setName)
   def xLayoutAlignment: Ref[F, Float] =
@@ -43,10 +46,20 @@ abstract class Component[F[_]](topic: Topic[F, event.Event[F]], dispatcher: Disp
 
   // TODO: Paint
   // Requires wrapping Graphics2D
+  /**
+   * Requests focus
+   */
   def requestFocus: F[Unit] =
     F.delay { peer.requestFocus() }.evalOn(AwtEventDispatchEC)
+  /**
+   * Request focus in the window this component is in
+   * @returns success
+   */
   def requestFocusInWindow: F[Boolean] =
     F.delay { peer.requestFocusInWindow() }.evalOn(AwtEventDispatchEC)
+  /**
+   * Revalidates this tree
+   */
   def revalidate: F[Unit] =
     F.delay { peer.revalidate() }.evalOn(AwtEventDispatchEC)
 

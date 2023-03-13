@@ -33,8 +33,12 @@ object AdjustTo {
 }
 
 trait Adjusted[F[_]: Async] {
+  /**
+   * Orientation of a component
+   */
   def adjustTo: RefSource[F, AdjustTo]
 }
 trait Adjustable[F[_]: Async] extends Adjusted[F] {
+
   override def adjustTo: Ref[F, AdjustTo]
 }

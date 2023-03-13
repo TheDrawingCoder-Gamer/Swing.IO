@@ -21,6 +21,12 @@ class ImageIcon[F[_]](image0: Image[F])(using F: Async[F]) extends Icon[F] {
     new WrappedRef(peer.getDescription, peer.setDescription)
 }
 trait WithIcon[F[_]: Async] {
+  /**
+   * The current Icon, or None if there is no icon.
+   */
   def icon: Ref[F, Option[Icon[F]]]
+  /**
+   * Gap between any text and the icon
+   */
   def iconTextGap: Ref[F, Int]
 }

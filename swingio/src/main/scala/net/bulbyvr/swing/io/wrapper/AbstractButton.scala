@@ -13,7 +13,14 @@ abstract class AbstractButton[F[_]](dispatcher: Dispatcher[F], topic: Topic[F, e
   with WithIcon[F] { outer =>
   override lazy val peer: JAbstractButton = new JAbstractButton with SuperMixin {}
 
+  /**
+   * Trigger a click on this button
+   */
   def click: F[Unit] = F.delay { peer.doClick() }.evalOn(AwtEventDispatchEC)
+  /**
+   * Trigger a click with n clicks on this button
+   * @param n number of clicks
+   */
   def clickN(n: Int): F[Unit] = F.delay { peer.doClick(n) }.evalOn(AwtEventDispatchEC)
 
   lazy val a: ActionListener = _ => {

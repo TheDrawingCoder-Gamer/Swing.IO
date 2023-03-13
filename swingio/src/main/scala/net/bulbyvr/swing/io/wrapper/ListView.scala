@@ -88,8 +88,14 @@ object ListView {
   }
 }
 trait WithRenderer[F[_]: Async, A] {
+  /**
+   * Sets renderer. Write only access.
+   */
   def renderer: RefSink[F, ListView.Renderer[F, A]]
 }
+/**
+ * A view of a list of items represented as components with a renderer.
+ */
 class ListView[F[_]: Async, A](dispatcher: Dispatcher[F], topic: Topic[F, event.Event[F]]) extends Component[F](topic, dispatcher) with WithRenderer[F, A] {
   override lazy val peer: JList[A] = new JList[A]() with SuperMixin
   def ensureIndexIsVisible(idx: Int): F[Unit] =
@@ -109,6 +115,9 @@ class ListView[F[_]: Async, A](dispatcher: Dispatcher[F], topic: Topic[F, event.
     def getElementAt(n: Int): B = items(n)
     def getSize: Int = items.size
   }
+  /**
+   * The data in the list view.
+   */
   def listData: Ref[F, Seq[A]] =
     new WrappedRef(
       () => peer.getModel match {
@@ -126,6 +135,9 @@ class ListView[F[_]: Async, A](dispatcher: Dispatcher[F], topic: Topic[F, event.
       items => 
         peer.setModel(new ModelWrapper[A](items))
       )
+  /**
+   * Amount of rows visible without scrolling
+   */
   def visibleRowCount: Ref[F, Int] =
     new WrappedRef(peer.getVisibleRowCount, peer.setVisibleRowCount)
 
