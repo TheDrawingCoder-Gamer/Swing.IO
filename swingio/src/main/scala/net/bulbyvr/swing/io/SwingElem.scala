@@ -30,8 +30,8 @@ private trait SwingElems[F[_]](using F: Async[F]) {
   lazy val label: NormalElem[F, swingio.Label[F]] = NormalElem(swingio.Label(""))
   lazy val window: MainElem[F] = MainElem(swingio.MainFrame[F])
   lazy val flow: NormalElem[F, swingio.FlowPanel[F]] = NormalElem(swingio.FlowPanel[F](swingio.FlowPanel.Alignment.Center))
-  def box(orientation: swingio.Orientation = swingio.Orientation.Vertical) = 
-    NormalElem[F, swingio.BoxPanel[F]](swingio.BoxPanel[F](orientation))
+  lazy val box = 
+    NormalElem[F, swingio.BoxPanel[F]](swingio.BoxPanel[F](swingio.Orientation.Vertical))
   lazy val button: NormalElem[F, swingio.Button[F]] = NormalElem(swingio.Button[F])
   lazy val textField: NormalElem[F, swingio.TextField[F]] = NormalElem(swingio.TextField[F])
   lazy val checkbox: NormalElem[F, swingio.CheckBox[F]] = NormalElem(swingio.CheckBox[F])

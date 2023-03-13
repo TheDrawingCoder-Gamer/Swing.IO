@@ -1,6 +1,6 @@
 package net.bulbyvr.swing.io
 import cats.data.State
-import cats.effect.kernel.{Ref, RefSink}
+import cats.effect.kernel.{Ref, RefSink, RefSource}
 import cats.effect.kernel.Async
 import cats.syntax.all.*
 import cats.effect.syntax.all.*
@@ -16,14 +16,23 @@ object WrappedSink {
   def apply[F[_]: Async, A](unsafeSet: A => Unit) =
     new WrappedSink(unsafeSet) {}
 }
+sealed trait WrappedSource[F[_], A](
+    unsafeGet: () => A
+  )(using F: Async[F])
+  extends RefSource[F, A] {
+    def get: F[A] = F.delay(unsafeGet()).evalOn(AwtEventDispatchEC)
+  }
+object WrappedSource {
+  def apply[F[_]: Async, A](unsafeGet: () => A) =
+    new WrappedSource(unsafeGet) {}
+}
 final class WrappedRef[F[_], A](
     unsafeGet: () => A,
     unsafeSet: A => Unit
 )(implicit F: Async[F])
     extends Ref[F, A] 
-    with WrappedSink[F, A](unsafeSet) {
-
-  def get: F[A] = F.delay(unsafeGet()).evalOn(AwtEventDispatchEC)
+    with WrappedSink[F, A](unsafeSet) 
+    with WrappedSource(unsafeGet) {
 
   def access: F[(A, A => F[Boolean])] = F.delay {
     val snapshot = unsafeGet()

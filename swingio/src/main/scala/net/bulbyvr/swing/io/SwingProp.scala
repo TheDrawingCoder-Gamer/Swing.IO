@@ -172,6 +172,10 @@ private trait Props[F[_]](using A: Async[F]) extends LowPriorityProps[F] {
   given lookAndFeelProp[E <: swingio.MainFrame[F]]: Setter[F, E, "lookAndFeel", String] =
     (e, v) => A.delay { UIManager.setLookAndFeel(v) }.evalOn(AwtEventDispatchEC).toResource
   lazy val lookAndFeel = prop["lookAndFeel"]
+
+  given adjustToProp[E <: swingio.Adjustable[F]]: Setter[F, E, "adjustTo", swingio.AdjustTo] =
+    (e, v) => e.adjustTo.set(v).toResource
+  lazy val adjustTo = prop["adjustTo"]
 }
 
 private trait LowPriorityProps[F[_]] (using F: Async[F]) {

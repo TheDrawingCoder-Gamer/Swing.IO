@@ -13,6 +13,7 @@ import cats.syntax.all.*
 import cats.Traverse
 import cats.effect.Resource
 import fs2.concurrent.Topic
+import cats.effect.kernel.RefSource
 
 import scala.ref.WeakReference
 trait UIElement[F[_]](using F: Async[F]) extends WithTopic[F] {
@@ -26,14 +27,19 @@ trait UIElement[F[_]](using F: Async[F]) extends WithTopic[F] {
     new WrappedRef(peer.getComponentOrientation, peer.setComponentOrientation)
   def cursor: Ref[F, awt.Cursor] =
     new WrappedRef(peer.getCursor, peer.setCursor)
+
   def displayable: F[Boolean] =
     F.delay { peer.isDisplayable() }.evalOn(AwtEventDispatchEC)
+
   def font: Ref[F, awt.Font] =
     new WrappedRef(peer.getFont, peer.setFont)
+
   def foreground: Ref[F, awt.Color] =
     new WrappedRef(peer.getForeground, peer.setForeground)
+
   def ignoreRepaint: Ref[F, Boolean] =
     new WrappedRef(peer.getIgnoreRepaint, peer.setIgnoreRepaint)
+
   def locale: F[ju.Locale] =
     F.delay { peer.getLocale() }.evalOn(AwtEventDispatchEC)
   def location: F[Vec2i] =
@@ -55,6 +61,11 @@ trait UIElement[F[_]](using F: Async[F]) extends WithTopic[F] {
   def size: F[Dimension] =
     F.delay { Dimension.of(peer.getSize())}.evalOn(AwtEventDispatchEC)
   // NO TOOLKIT : (
+  /**
+   * Validate this component's tree
+   *
+   * This depends on if this component is a container or not
+   */
   def validate: F[Unit] =
     F.delay { peer.validate() }.evalOn(AwtEventDispatchEC)
   def visible: Ref[F, Boolean] =
@@ -69,6 +80,10 @@ trait UIElement[F[_]](using F: Async[F]) extends WithTopic[F] {
   override protected def onLastUnsubscribe: F[Unit] = F.unit
 }
 
+/**
+ * Includes private helpers for caching. Caching is currently handled outside of the IO monad,
+ * but it's planned that it will be moved into the IO monad.
+ */
 object UIElement  {
   private val ClientKey = "swing.io.swingWrapper"
   private[this] val wrapperCache = new ju.WeakHashMap[awt.Component, WeakReference[UIElement[Id]]]
@@ -99,7 +114,7 @@ object UIElement  {
     for {
       topic <- Topic[F, event.Event[F]].toResource
       dispatcher <- Dispatcher.sequential[F]
-      res <- F.delay { build(dispatcher, topic) }.toResource.flatTap(_.setup)
+      res <- F.delay { build(dispatcher, topic) }.toResource.flatTap(_.setup).evalOn(AwtEventDispatchEC)
     } yield res
   }
 }
