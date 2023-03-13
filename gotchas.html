@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="Laika 0.18.1 + Helium Theme" />
-    <title>Swing.IO</title>
+    <title>Common Gotchas</title>
     
       <meta name="author" content="Ben Harless"/>
     
@@ -61,9 +61,9 @@
       </div>
 
       <ul class="nav-list">
-        <li class="level1 active"><a href="#">Swing.IO</a></li>
+        <li class="level1"><a href="index.html">Swing.IO</a></li>
         <li class="level1"><a href="concepts.html">Core Concepts</a></li>
-        <li class="level1"><a href="gotchas.html">Common Gotchas</a></li>
+        <li class="level1 active"><a href="#">Common Gotchas</a></li>
       </ul>
 
       <ul class="nav-list">
@@ -78,10 +78,12 @@
     <div id="container">
 
       <nav id="page-nav">
-        <p class="header"><a href="#">Swing.IO</a></p>
+        <p class="header"><a href="#">Common Gotchas</a></p>
 
         <ul class="nav-list">
-          <li class="level1"><a href="#acknowlegements">Acknowlegements</a></li>
+          <li class="level1"><a href="#look-and-feel">Look And Feel</a></li>
+          <li class="level1"><a href="#circumventing-dsl">Circumventing DSL</a></li>
+          <li class="level1"><a href="#adding-custom-components">Adding custom components</a></li>
         </ul>
 
         <p class="footer"></p>
@@ -89,12 +91,47 @@
 
       <main class="content">
 
-        <h1 id="swing-io" class="title">Swing.IO</h1>
-        <p>Swing.IO is a library for the Typelevel ecosystem. It&#39;s meant to be an analog for Calico for JVM land. </p>
+        <h1 id="common-gotchas" class="title">Common Gotchas</h1>
+        <p><strong>Swing.IO</strong> has a fundementally different base from <strong>Calico</strong>. While it tries to be similar, some <strong>Calico</strong>
+        patterns are unsupported.</p>
+        <pre class="keep-together pdf epub"><code class="nohighlight"><span class="identifier">textField</span><span>.</span><span class="identifier">withSelf</span><span> { </span><span class="identifier">self</span><span> =&gt;
+  (
+    </span><span class="identifier">text</span><span> &lt;-- </span><span class="identifier">txtRef</span><span>,
+    </span><span class="identifier">onValueChange</span><span> --&gt; {
+      </span><span class="identifier">_</span><span>.</span><span class="identifier">foreach</span><span>(</span><span class="identifier">_</span><span> =&gt; </span><span class="identifier">self</span><span>.</span><span class="identifier">value</span><span>.</span><span class="identifier">get</span><span>.</span><span class="identifier">flatMap</span><span>(</span><span class="identifier">txtRef</span><span>.</span><span class="identifier">set</span><span>))
+    }
+  )
+}</span></code></pre>
+        <p>This pattern causes an infinite loop that consumes all memory in the app. </p>
         
-        <h2 id="acknowlegements" class="section">Acknowlegements<a class="anchor-link right" href="#acknowlegements"><i class="icofont-laika">&#xef71;</i></a></h2>
-        <p><strong>Swing.IO</strong> is inspired by <a href="https://github.com/armanbilge/calico">Calico</a>. It takes a lot of cues from it and from proposals of it. </p>
-        <p>Thanks to <a href="https://github.com/armanbilge">@armanbilge</a> for putting up with me in his chat and dealing with my questions. </p>
+        <h2 id="look-and-feel" class="section">Look And Feel<a class="anchor-link right" href="#look-and-feel"><i class="icofont-laika">&#xef71;</i></a></h2>
+        <p>When setting the Look and Feel of an app, Resources can&#39;t be prematurely initialized. </p>
+        <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">for</span><span> {
+  </span><span class="identifier">comp</span><span> &lt;- </span><span class="identifier">resourceComponent</span><span>
+  </span><span class="identifier">win</span><span> &lt;- </span><span class="identifier">window</span><span>(
+    </span><span class="identifier">lookAndFeel</span><span> := ???,
+    </span><span class="comment">// Don&#39;t do this, comp will be styled with the default look and feel
+</span><span>    </span><span class="identifier">comp</span><span>
+  )
+} </span><span class="keyword">yield</span><span> </span><span class="identifier">win</span></code></pre>
+        <p>Instead, obtain the resource directly. <strong>Swing.IO</strong> supports composing resources together, and it handles the 
+        lifecycles itself. </p>
+        <pre class="keep-together pdf epub"><code class="nohighlight"><span class="keyword">for</span><span> {
+  </span><span class="identifier">comp</span><span> = </span><span class="identifier">resourceComponent</span><span>
+  </span><span class="identifier">win</span><span> &lt;- </span><span class="identifier">window</span><span>(
+    </span><span class="identifier">lookAndFeel</span><span> := ???,
+    </span><span class="identifier">comp</span><span>
+  )
+} </span><span class="keyword">yield</span><span> </span><span class="identifier">win</span></code></pre>
+        <p>Look and feel can&#39;t be updated, as the components style won&#39;t update.</p>
+        
+        <h2 id="circumventing-dsl" class="section">Circumventing DSL<a class="anchor-link right" href="#circumventing-dsl"><i class="icofont-laika">&#xef71;</i></a></h2>
+        <p>If you have to access a feature that isn&#39;t implemented in the DSL yet, you can use flatTaps.</p>
+        <pre class="keep-together pdf epub"><code class="nohighlight"><span class="identifier">checkbox</span><span>(</span><span class="identifier">icon</span><span> := ???).</span><span class="identifier">flatTap</span><span>(</span><span class="identifier">_</span><span>.</span><span class="identifier">iconTextGap</span><span>.</span><span class="identifier">set</span><span>(</span><span class="number-literal">20</span><span>).</span><span class="identifier">toResource</span><span>)</span></code></pre>
+        
+        <h2 id="adding-custom-components" class="section">Adding custom components<a class="anchor-link right" href="#adding-custom-components"><i class="icofont-laika">&#xef71;</i></a></h2>
+        <p>You can technically make your own component by extending a wrapper class. However, it requires wrapping a peer. WrappedRef is exposed to allow for wrapping.
+        See source code for examples of wrapping.</p>
 
         <hr style="margin-top: 30px"/>
         <footer style="font-size: 90%; text-align: center">
