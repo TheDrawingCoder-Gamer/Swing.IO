@@ -10,6 +10,7 @@ ThisBuild / organizationHomepage := Some(url("https://thedrawingcoder-gamer.gith
 
 ThisBuild / tlCiReleaseBranches := Seq("master")
 ThisBuild / tlSitePublishBranch := Some("master")
+ThisBuild / tlSiteApiUrl := Some(url("https://javadoc.io/doc/io.github.thedrawingcoder-gamer/swing-io_3/latest/index.html"))
 ThisBuild / scmInfo := Some(
   ScmInfo(
     url("https://github.com/TheDrawingCoder-Gamer/Swing.IO"),
@@ -31,8 +32,6 @@ ThisBuild / licenses := List(
 )
 ThisBuild / homepage := Some(url("https://github.com/TheDrawingCoder-Gamer/Swing.IO"))
 
-ThisBuild / pomIncludeRepository := { _ => false }
-ThisBuild / publishMavenStyle := true
 ThisBuild / publishTo := {
   val sonatype = "https://s01.oss.sonatype.org/"
   if (isSnapshot.value)

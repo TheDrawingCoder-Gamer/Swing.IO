@@ -3,7 +3,7 @@ package wrapper
 
 import cats.effect.syntax.all.*
 import cats.syntax.all.*
-import cats.effect.{Async, Ref}
+import cats.effect.{Async, Ref, Resource}
 import cats.effect.std.Dispatcher
 import fs2.concurrent.Topic
 
@@ -51,4 +51,14 @@ class Slider[F[_]: Async](topic: Topic[F, event.Event[F]], dispatcher: Dispatche
   override protected def onLastUnsubscribe: F[Unit] =
     super.onLastUnsubscribe *> Async[F].delay { peer.removeChangeListener(cl) }.evalOn(AwtEventDispatchEC)
 
+}
+
+object Slider {
+  def apply[F[_]: Async]: Resource[F, Slider[F]] = {
+    for {
+      topic <- Topic[F, event.Event[F]].toResource
+      dispatcher <- Dispatcher.sequential[F]
+      res <- Async[F].delay { new Slider(topic, dispatcher) }.toResource.flatTap(_.setup).evalOn(AwtEventDispatchEC)
+    } yield res
+  }
 }
