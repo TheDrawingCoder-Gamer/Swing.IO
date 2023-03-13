@@ -18,7 +18,7 @@ object Main extends IOSwingApp {
   def render = 
     (SignallingRef[IO].of(false), SignallingRef[IO].of(""), SignallingRef[IO].of(daItems.head)).tupled.toResource.flatMap { (smth, txt, curItem) => 
       window(
-      box(
+      box()(
         label(text <-- smth.map(_.toString())),
         flow(
           button(
