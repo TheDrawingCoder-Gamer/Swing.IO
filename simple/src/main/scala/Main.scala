@@ -3,6 +3,7 @@ import fs2.{text as _, *}
 import fs2.concurrent.{Signal, SignallingRef}
 import cats.effect.syntax.all.*
 import cats.effect.IO
+import net.bulbyvr.swing.io.wrapper.*
 import net.bulbyvr.swing.io.wrapper.event.*
 import cats.effect.Resource
 import cats.syntax.all.*
@@ -52,6 +53,12 @@ object Main extends IOSwingApp {
           renderer := { (it: ComboBoxItem) => {
             it.item.pure[IO]
           } }
+        )},
+        button.withSelf { self =>( 
+          text := "Select file",
+          onBtnClick --> {
+            _.evalMap(_ => FileChooser[IO].open(self)).foreach(_ => IO.unit)
+          }
         )}
       ),
     
