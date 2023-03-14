@@ -4,7 +4,7 @@ package wrapper
 import cats.effect.{Async, Ref}
 import cats.syntax.all.*
 import cats.effect.syntax.all.*
-trait RootPanel[F[_]](using F: Async[F]) extends Container[F] {
+trait RootPanel[F[_]](using F: Async[F]) extends SingletonContainer[F] {
   def peer: java.awt.Component with javax.swing.RootPaneContainer
 
   def child: Ref[F, Option[Component[F]]] =
@@ -29,6 +29,4 @@ trait RootPanel[F[_]](using F: Async[F]) extends Container[F] {
     }
     comp.foreach(i => peer.getContentPane.add(i.peer))
   }.evalOn(AwtEventDispatchEC) <* validate
-  def contents: F[Seq[Component[F]]] =
-    child.get.map(_.toSeq)
 }

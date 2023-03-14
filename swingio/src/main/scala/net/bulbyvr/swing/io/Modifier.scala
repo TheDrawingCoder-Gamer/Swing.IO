@@ -64,7 +64,7 @@ private trait Modifiers[F[_]](using F: Async[F]) {
     (a, e) => {
       swingio.Label[F](a).flatMap(l => e.content.addOne(l).toResource)
     }
-  given forRootString[E <: swingio.RootPanel[F]]: Modifier[F, E, String] =
+  given forRootString[E <: swingio.SingletonContainer[F]]: Modifier[F, E, String] =
     (a, e) => {
       swingio.Label[F](a).flatMap(l => e.child.set(Some(l)).toResource) 
     }
@@ -105,7 +105,7 @@ private trait Modifiers[F[_]](using F: Async[F]) {
     e.content.addOne(a).toResource
   }
   
-  given forRootComponent[E <: swingio.RootPanel[F], C <: swingio.Component[F]]: Modifier[F, E, C] = { (a, e) =>
+  given forRootComponent[E <: swingio.SingletonContainer[F], C <: swingio.Component[F]]: Modifier[F, E, C] = { (a, e) =>
     e.child.set(Some(a)).toResource
   }
 
@@ -114,7 +114,7 @@ private trait Modifiers[F[_]](using F: Async[F]) {
     Modifier.forResource
 
 
-  given forRootComponentResource[E <: swingio.RootPanel[F], C <: swingio.Component[F]]: Modifier[F, E, Resource[F, C]] =
+  given forRootComponentResource[E <: swingio.SingletonContainer[F], C <: swingio.Component[F]]: Modifier[F, E, Resource[F, C]] =
     Modifier.forResource
   given forComponentSignal[E <: swingio.MutableContainer[F], C <: swingio.Component[F]]: Modifier[F, E, Signal[F, Resource[F, C]]] = { (cs, e) =>
     cs.getAndDiscreteUpdates.flatMap { (head, tail) =>
@@ -123,7 +123,7 @@ private trait Modifiers[F[_]](using F: Async[F]) {
         (F.cede *> tail
           .foreach(hs.swap(_)((c2, c3) => {
             for {
-              contents <- e.contents
+              contents <- e.contents.get
               idx = contents.indexOf(c2)
               _ <- 
                 if (idx != -1)

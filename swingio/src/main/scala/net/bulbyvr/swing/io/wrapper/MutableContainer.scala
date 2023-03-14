@@ -1,7 +1,7 @@
 package net.bulbyvr.swing.io
 package wrapper
 
-import cats.effect.Async
+import cats.effect.{Async, Ref}
 import cats.syntax.all.*
 import cats.effect.syntax.all.*
 /**
@@ -10,9 +10,11 @@ import cats.effect.syntax.all.*
  */
 trait MutableContainer[F[_]](using F: Async[F]) extends Container[F] {
   override def peer: javax.swing.JComponent
-  override def contents: F[Seq[Component[F]]] =
-    F.delay { peer.getComponents().toSeq }.evalOn(AwtEventDispatchEC)
-      >>= (_.traverse(it => UIElement.cachedWrapper[F, Component[F]](it).map(_.get)).evalOn(AwtEventDispatchEC))
+  override def contents: Ref[F, Seq[Component[F]]] =
+    new FWrappedRef(F.delay { peer.getComponents().toSeq }.evalOn(AwtEventDispatchEC)
+      >>= (_.traverse(it => UIElement.cachedWrapper[F, Component[F]](it).map(_.get)).evalOn(AwtEventDispatchEC)),
+      it => content.clear() *> it.traverse(content.addOne).void
+      )
   object content {
 
     def addOne(c: Component[F]): F[Unit] =
