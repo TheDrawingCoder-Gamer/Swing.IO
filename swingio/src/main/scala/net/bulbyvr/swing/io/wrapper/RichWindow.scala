@@ -4,7 +4,7 @@ package wrapper
 import cats.effect.{Async, Ref, Resource, Deferred}
 import cats.effect.std.Dispatcher
 import java.awt.{Window as AWTWindow, Frame as AWTFrame}
-import javax.swing.{JFrame, JMenuBar, WindowConstants}
+import javax.swing.{JFrame, JMenuBar, WindowConstants, UIManager}
 import cats.effect.syntax.all.*
 import cats.syntax.all.*
 import fs2.concurrent.Topic
@@ -40,6 +40,6 @@ object MainFrame {
       dispatcher <- Dispatcher.sequential[F]
       topic <- Topic[F, event.Event[F]].toResource
       gate <- Deferred[F, Unit].toResource
-      res <- Resource.eval(F.delay { new MainFrame(gate, topic, dispatcher)}).flatTap(_.setup).evalOn(AwtEventDispatchEC)
+      res <- Resource.eval(F.delay { UIManager.setLookAndFeel(LookAndFeel.defaultLookAndFeel); new MainFrame(gate, topic, dispatcher)}).flatTap(_.setup).evalOn(AwtEventDispatchEC)
     } yield (res, gate)
 }

@@ -7,7 +7,7 @@ import net.bulbyvr.swing.io.wrapper.*
 import net.bulbyvr.swing.io.wrapper.event.*
 import cats.effect.Resource
 import cats.syntax.all.*
-
+import javax.swing.UIManager
 case class ComboBoxItem(item: String)
 object Main extends IOSwingApp {
   val daItems = 
@@ -19,47 +19,56 @@ object Main extends IOSwingApp {
   def render = 
     (SignallingRef[IO].of(false), SignallingRef[IO].of(""), SignallingRef[IO].of(daItems.head)).tupled.toResource.flatMap { (smth, txt, curItem) => 
       window(
-      box(
-        label(text <-- smth.map(_.toString())),
-        flow(
-          button(
-            text := "hi",
-            onBtnClick --> {
-              _.evalMap(_ => smth.get).foreach(it => IO.println(it) *> smth.set(!it))
-            }
-            ),
-          textField.withSelf { self =>
-            (
-              columns := 10,
-              onValueChange --> {
-                _.evalMap(_ => self.text.get).foreach(txt.set)
+      notebook(
+        "Test" -> box(
+          label(text <-- smth.map(_.toString())),
+          flow(
+            button(
+              text := "hi",
+              onBtnClick --> {
+                _.evalMap(_ => smth.get).foreach(it => IO.println(it) *> smth.set(!it))
               }
-              )
-          }
-        ),
-        checkbox.withSelf {self => (
-          text := "boolean",
-          selected <-- smth,
-          onBtnClick --> {
-            _.evalMap(_ => self.selected.get).foreach(smth.set)
-          }
-          )
-        },
-        comboBox[ComboBoxItem].withSelf { self => (
-          items := this.daItems,
-          onSelectionChange --> {
-            _.evalMap(_ => self.item.get).foreach(it => IO.println(it) *> curItem.set(it))
+              ),
+            textField.withSelf { self =>
+              (
+                columns := 10,
+                onValueChange --> {
+                  _.evalMap(_ => self.text.get).foreach(txt.set)
+                }
+                )
+            }
+          ),
+          checkbox.withSelf {self => (
+            text := "boolean",
+            selected <-- smth,
+            onBtnClick --> {
+              _.evalMap(_ => self.selected.get).foreach(smth.set)
+            }
+            )
           },
-          renderer := { (it: ComboBoxItem) => {
-            it.item.pure[IO]
-          } }
-        )},
-        button.withSelf { self =>( 
-          text := "Select file",
-          onBtnClick --> {
-            _.evalMap(_ => FileChooser[IO].open(self)).foreach(_ => IO.unit)
-          }
-        )}
+          flow(
+            comboBox[ComboBoxItem].withSelf { self => (
+              items := this.daItems,
+              onSelectionChange --> {
+                _.evalMap(_ => self.item.get).foreach(it => IO.println(it) *> curItem.set(it))
+              },
+              renderer := { (it: ComboBoxItem) => {
+                it.item.pure[IO]
+              } }
+            )}
+          ),
+          button.withSelf { self =>( 
+            text := "Select file",
+            onBtnClick --> {
+              _.evalMap(_ => FileChooser[IO].open(self)).foreach(_ => IO.unit)
+            }
+          )}
+        
+        ),
+        "Sample 2" -> box(
+          flow(label(text := "banana"), textField(columns := 10)),
+          
+          )
       ),
     
       title := "Hello World!",

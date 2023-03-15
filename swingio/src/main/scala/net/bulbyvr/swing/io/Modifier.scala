@@ -109,6 +109,9 @@ private trait Modifiers[F[_]](using F: Async[F]) {
     e.child.set(Some(a)).toResource
   }
 
+  given forTabComponent[E <: swingio.TabbedPane[F], C <: swingio.Component[F]]: Modifier[F, E, (String, C)] = { (a, e) => 
+    e.addPage(swingio.TabbedPane.Page[F](a._1, a._2)).toResource
+  }
 
   given forComponentResource[E <: swingio.MutableContainer[F], C <: swingio.Component[F]]: Modifier[F, E, Resource[F, C]] = 
     Modifier.forResource
@@ -116,6 +119,12 @@ private trait Modifiers[F[_]](using F: Async[F]) {
 
   given forRootComponentResource[E <: swingio.SingletonContainer[F], C <: swingio.Component[F]]: Modifier[F, E, Resource[F, C]] =
     Modifier.forResource
+  given forTabComponentResource[E <: swingio.TabbedPane[F], C <: swingio.Component[F]]: Modifier[F, E, (String, Resource[F, C])] = { (a, e) =>
+    a._2 flatMap { page => 
+      forTabComponent.modify((a._1, page), e)
+    }
+  }
+    
   given forComponentSignal[E <: swingio.MutableContainer[F], C <: swingio.Component[F]]: Modifier[F, E, Signal[F, Resource[F, C]]] = { (cs, e) =>
     cs.getAndDiscreteUpdates.flatMap { (head, tail) =>
       SwingHotswap(head).flatMap { (hs, c2) =>

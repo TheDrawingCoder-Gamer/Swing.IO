@@ -38,4 +38,6 @@ private trait SwingElems[F[_]](using F: Async[F]) {
   lazy val radio: NormalElem[F, swingio.RadioButton[F]] = NormalElem(swingio.RadioButton[F])
   def comboBox[A]: NormalElem[F, swingio.ComboBox[F, A]] = NormalElem(swingio.ComboBox[F, A])
   def listView[A]: NormalElem[F, swingio.ListView[F, A]] = NormalElem(swingio.ListView[F][A])
+  lazy val notebook =
+    NormalElem[F, swingio.TabbedPane[F]](swingio.TabbedPane[F])
 }
