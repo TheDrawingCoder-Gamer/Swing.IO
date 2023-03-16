@@ -20,7 +20,7 @@ object FileChooser {
     private def showOpenDialog(comp: UIElement[F], show: FileDialog => Unit)(using Async[F]): F[Option[File]] = {
       Async[F].delay {  SwingUtilities.windowForComponent(comp.peer).asInstanceOf[java.awt.Frame] }.flatMap { frame => 
         showDialog(frame, show).flatMap { fc =>
-          Async[F].delay { Option(fc.getFiles).map(_(0)) }.evalOn(AwtEventDispatchEC)
+          Async[F].delay { Option(fc.getFiles).flatMap(it => it.lift(0) ) }.evalOn(AwtEventDispatchEC)
 
         }
       }
