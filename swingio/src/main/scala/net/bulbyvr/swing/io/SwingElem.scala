@@ -58,6 +58,9 @@ private trait SwingElems[F[_]](using F: Async[F]) {
   lazy val textField: NormalElem[F, swingio.TextField[F]] = NormalElem(
     swingio.TextField[F]
   )
+  lazy val textArea: NormalElem[F, swingio.TextArea[F]] = NormalElem(
+    swingio.TextArea[F]
+  )
   lazy val checkbox: NormalElem[F, swingio.CheckBox[F]] = NormalElem(
     swingio.CheckBox[F]
   )
