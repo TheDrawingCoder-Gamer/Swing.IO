@@ -3,18 +3,6 @@
 **Swing.IO** has a fundementally different base from **Calico**. While it tries to be similar, some **Calico**
 patterns are unsupported.
 
-```scala
-textField.withSelf { self =>
-  (
-    text <-- txtRef,
-    onValueChange --> {
-      _.foreach(_ => self.value.get.flatMap(txtRef.set))
-    }
-  )
-}
-```
-This pattern causes an infinite loop that consumes all memory in the app. 
-
 ## Look And Feel
 When setting the Look and Feel of an app, Resources can't be prematurely initialized. 
 
