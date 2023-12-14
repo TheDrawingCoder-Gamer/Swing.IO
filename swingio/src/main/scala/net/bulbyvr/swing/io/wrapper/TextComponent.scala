@@ -5,7 +5,8 @@ import cats.effect.{Async, Ref}
 import cats.effect.std.Dispatcher
 import fs2.concurrent.Topic
 import javax.swing.text.JTextComponent
-import javax.swing.event.{DocumentEvent, DocumentListener}
+// import javax.swing.event.{DocumentEvent, DocumentListener}
+import java.awt.event.{InputMethodListener, InputMethodEvent}
 import cats.effect.syntax.all.*
 import cats.syntax.all.*
 
@@ -39,7 +40,7 @@ class TextComponent[F[_]](topic: Topic[F, event.Event[F]], dispatcher: Dispatche
     def selected: F[String] = F.delay { peer.getSelectedText() }.evalOn(AwtEventDispatchEC)
 
     def selectAll: F[Unit] = F.delay { peer.selectAll() }.evalOn(AwtEventDispatchEC)
-
+    /*
     private lazy val dl = new DocumentListener {
       def changedUpdate(e: DocumentEvent) = {
         dispatcher.unsafeRunAndForget(topic.publish1(new event.ValueChanged(TextComponent.this)))
@@ -51,8 +52,15 @@ class TextComponent[F[_]](topic: Topic[F, event.Event[F]], dispatcher: Dispatche
         dispatcher.unsafeRunAndForget(topic.publish1(new event.ValueChanged(TextComponent.this)))
       }
     }
+    */
+    private lazy val iml = new InputMethodListener {
+      def inputMethodTextChanged(e: InputMethodEvent) = {
+        dispatcher.unsafeRunAndForget(topic.publish1(new event.ValueChanged(TextComponent.this)))
+      }
+      def caretPositionChanged(e: InputMethodEvent) = {}
+    }
     override def onFirstSubscribe =
-      super.onFirstSubscribe *> F.delay { peer.getDocument.addDocumentListener(dl) }.evalOn(AwtEventDispatchEC)
+      super.onFirstSubscribe *> F.delay { peer.addInputMethodListener(iml) }.evalOn(AwtEventDispatchEC)
     override def onLastUnsubscribe =
-      super.onLastUnsubscribe *> F.delay { peer.getDocument.removeDocumentListener(dl) }.evalOn(AwtEventDispatchEC)
+      super.onLastUnsubscribe *> F.delay { peer.removeInputMethodListener(iml) }.evalOn(AwtEventDispatchEC)
 }

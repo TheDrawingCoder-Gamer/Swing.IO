@@ -24,6 +24,7 @@ abstract class AbstractButton[F[_]](dispatcher: Dispatcher[F], topic: Topic[F, e
   def clickN(n: Int): F[Unit] = F.delay { peer.doClick(n) }.evalOn(AwtEventDispatchEC)
 
   lazy val a: ActionListener = _ => {
+    // TODO: This is overly accepting
     dispatcher.unsafeRunAndForget(outer.topic.publish1(event.ButtonClicked(outer)))
   }
 

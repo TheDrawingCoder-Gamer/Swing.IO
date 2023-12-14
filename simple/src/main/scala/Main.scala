@@ -34,7 +34,8 @@ object Main extends IOSwingApp {
                 columns := 10,
                 onValueChange --> {
                   _.evalMap(_ => self.text.get).foreach(txt.set)
-                }
+                },
+                text <-- txt
                 )
             }
           ),
