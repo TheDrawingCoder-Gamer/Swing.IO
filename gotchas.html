@@ -102,15 +102,6 @@
         <h1 id="common-gotchas" class="title">Common Gotchas</h1>
         <p><strong>Swing.IO</strong> has a fundementally different base from <strong>Calico</strong>. While it tries to be similar, some <strong>Calico</strong>
         patterns are unsupported.</p>
-        <pre class="keep-together pdf epub"><code class="nohighlight"><span class="identifier">textField</span><span>.</span><span class="identifier">withSelf</span><span> { </span><span class="identifier">self</span><span> =&gt;
-  (
-    </span><span class="identifier">text</span><span> &lt;-- </span><span class="identifier">txtRef</span><span>,
-    </span><span class="identifier">onValueChange</span><span> --&gt; {
-      </span><span class="identifier">_</span><span>.</span><span class="identifier">foreach</span><span>(</span><span class="identifier">_</span><span> =&gt; </span><span class="identifier">self</span><span>.</span><span class="identifier">value</span><span>.</span><span class="identifier">get</span><span>.</span><span class="identifier">flatMap</span><span>(</span><span class="identifier">txtRef</span><span>.</span><span class="identifier">set</span><span>))
-    }
-  )
-}</span></code></pre>
-        <p>This pattern causes an infinite loop that consumes all memory in the app. </p>
         
         <h2 id="look-and-feel" class="section">Look And Feel<a class="anchor-link right" href="#look-and-feel"><i class="icofont-laika">&#xef71;</i></a></h2>
         <p>When setting the Look and Feel of an app, Resources can&#39;t be prematurely initialized. </p>
