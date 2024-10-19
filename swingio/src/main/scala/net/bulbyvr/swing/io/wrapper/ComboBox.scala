@@ -12,8 +12,9 @@ import fs2.concurrent.Topic
 import javax.swing.JComboBox
 import java.awt.event.{ActionListener, ActionEvent}
 
-class ComboBox[F[_]: Async, A](dispatcher: Dispatcher[F], topic: Topic[F, event.Event[F]]) extends Component[F](topic, dispatcher) with WithRenderer[F, A] {
+class ComboBox[F[_]: Async, A](dispatcher: Dispatcher[F], topic: Topic[F, event.Event[F]], private val updating: Ref[F, Boolean]) extends Component[F](topic, dispatcher) with WithRenderer[F, A] {
   override lazy val peer: JComboBox[A] = new JComboBox[A]() with SuperMixin
+
   /**
    * Renderer
    *
@@ -24,14 +25,14 @@ class ComboBox[F[_]: Async, A](dispatcher: Dispatcher[F], topic: Topic[F, event.
   /**
    * The current selected index
    */
-  def index: Ref[F, Int] = new WrappedRef(peer.getSelectedIndex, peer.setSelectedIndex)
+  def index: Ref[F, Int] = new FWrappedRef[F, Int](Async[F].delay { peer.getSelectedIndex }, it => updating.set(true) *> Async[F].delay { peer.setSelectedIndex(it) })
 
   // i love casting : (
   /**
    * Current selected item.
    * WARNING: Setting will not work if the item isn't in the dropdown
    */
-  def item: Ref[F, A] = new WrappedRef(() => peer.getSelectedItem.asInstanceOf[A], peer.setSelectedItem)
+  def item: Ref[F, A] = new FWrappedRef[F, A](Async[F].delay { peer.getSelectedItem.asInstanceOf[A] }, it => updating.set(true) *> Async[F].delay { peer.setSelectedItem(it) })
 
   /**
    * Max row count that can be displayed without scrolling
@@ -45,7 +46,12 @@ class ComboBox[F[_]: Async, A](dispatcher: Dispatcher[F], topic: Topic[F, event.
 
   private lazy val il: ActionListener = new ActionListener {
     def actionPerformed(e: ActionEvent): Unit = {
-      dispatcher.unsafeRunAndForget(topic.publish1(new event.SelectionChanged(ComboBox.this)))
+      dispatcher.unsafeRunAndForget {
+        for {
+          updated <- updating.getAndSet(false)
+          _ <- Async[F].whenA(!updated)(topic.publish1(event.SelectionChanged(ComboBox.this)))
+        } yield ()
+      }
     } 
   }
 
@@ -61,7 +67,8 @@ object ComboBox {
     for {
       dispatcher <- Dispatcher.sequential[F]
       topic <- Topic[F, event.Event[F]].toResource
+      updating <- Ref[F].of(false).toResource
       // Setup wasn't here before :broken_heart:
-      res <- Async[F].delay { new ComboBox[F, A](dispatcher, topic) }.toResource.flatTap(_.setup).evalOn(AwtEventDispatchEC)
+      res <- Async[F].delay { new ComboBox[F, A](dispatcher, topic, updating) }.toResource.flatTap(_.setup).evalOn(AwtEventDispatchEC)
     } yield res
 }

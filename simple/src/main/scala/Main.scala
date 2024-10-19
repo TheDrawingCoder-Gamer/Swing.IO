@@ -53,6 +53,7 @@ object Main extends IOSwingApp {
               onSelectionChange --> {
                 _.evalMap(_ => self.item.get).foreach(it => IO.println(it) *> curItem.set(it))
               },
+              item <-- curItem,
               renderer := { (it: ComboBoxItem) => {
                 it.item.pure[IO]
               } }
