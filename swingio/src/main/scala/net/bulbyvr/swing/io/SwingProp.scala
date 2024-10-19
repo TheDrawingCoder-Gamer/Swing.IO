@@ -200,6 +200,11 @@ private trait Props[F[_]](using A: Async[F]) extends LowPriorityProps[F] {
     (e, v) => e.items.set(v).toResource
   lazy val items = prop["items"]
 
+  given selectedItemForComboBox[A, E <: swingio.ComboBox[F, A]]
+    : Setter[F, E, "item", A] =
+      (e, v) => e.item.set(v).toResource
+  lazy val item = prop["item"]
+
   lazy val onMouseClick =
     eventProp["onMouseClick", swingio.event.MouseClicked[F]]
 

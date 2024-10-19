@@ -17,3 +17,13 @@ class ScrollPane[F[_]: Async](topic: Topic[F, event.Event[F]], dispatcher: Dispa
       , it => Async[F].delay { Option(peer.getViewport) }.flatMap(viewport => Async[F].delay { viewport.foreach(_.setView(it.map(_.peer).orNull))  })
       )
 }
+
+object ScrollPane {
+  def apply[F[_]](using F: Async[F]): Resource[F, ScrollPane[F]] = {
+    for {
+      topic <- Topic[F, event.Event[F]].toResource
+      dispatcher <- Dispatcher.sequential[F]
+      res <- F.delay { new ScrollPane[F](topic, dispatcher) }.toResource.flatTap(_.setup).evalOn(AwtEventDispatchEC)
+    } yield res
+  }
+}

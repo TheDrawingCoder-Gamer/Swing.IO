@@ -70,6 +70,9 @@ private trait SwingElems[F[_]](using F: Async[F]) {
   lazy val slider: NormalElem[F, swingio.Slider[F]] = NormalElem(
     swingio.Slider[F]
   )
+  lazy val scrollPane: NormalElem[F, swingio.ScrollPane[F]] = NormalElem(
+      swingio.ScrollPane[F]
+    )
   def comboBox[A]: NormalElem[F, swingio.ComboBox[F, A]] = NormalElem(
     swingio.ComboBox[F, A]
   )
